@@ -132,83 +132,55 @@ eksctl-alphadrive-nodegroup-basic-NodeInstanceRole-X019JEIFWG2T eksctl-alphadriv
 
 ## Running CARLA on the instance
 
-These are the preboot commands, which do something unknown
-
 ```bash
+# 1) Install X server stuff (No idea what this does, and it doesn't seem to be needed for a local instance test)
+sudo apt-get update
+sudo apt-get install x11-xserver-utils
+sudo apt-get install xdg-user-dirs
+sudo apt-get install xdg-utils
+
 grep --quiet tsc /sys/devices/system/clocksource/clocksource0/available_clocksource && sudo bash -c 'echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource'
-# sudo sh -c "cat /etc/docker/daemon.json | jq '. += {\"default-runtime\": \"nvidia\", \"runtimes\": {\"nvidia\": {\"path\": \"/usr/bin/nvidia-container-runtime\", \"runtimeArgs\": []}}}' | tee /etc/docker/daemon.json"        This doesn't seem to be needed as it's already part of the base image?
 sudo nvidia-xconfig --preserve-busid -a --virtual=1280x1024
-sudo X :0&
-```
+sudo X :0 -screen Screen0
 
-From there, download the containers for the Leaderboard 2.0:
-
-```bash
-# Create the credentials file
-
-# [default]
-# aws_access_key_id = ???
-# aws_secret_access_key = ???
-
-# Login to AWS
+# 2) Login to AWS
+mkdir .aws
+cat > .aws/credentials << EOF
+[default]
+aws_access_key_id = xxx
+aws_secret_access_key = xxx
+EOF
 sudo $(aws ecr get-login --no-include-email --region us-east-1)
 
-docker pull 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator
-docker pull 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20
-```
+# 3) Download the dockers
+sudo docker pull 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator
+sudo docker pull 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20
 
-Copy the LB and SR parts out of the dockers
+# 4) Copy the LB and SR parts out of the dockers
 
-```bash
-docker run -it --rm --volume=/tmp:/tmp:rw 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20 /bin/bash
-docker ps
-export $CONTAINER_CP=
-docker cp $CONTAINER_ID:/workspace/scenario_runner/ /tmp/scenario-runner-master/
-docker cp $CONTAINER_ID:/workspace/leaderboard/ /tmp/leaderboard-master/
-docker cp $CONTAINER_ID:/workspace/CARLA/ /tmp/carla-root-master/
-```
+sudo docker run -it --rm --volume=/tmp:/tmp:rw 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20 /bin/bash
+sudo docker ps
+export CONTAINER_ID=<container-id>
+sudo docker cp $CONTAINER_ID:/workspace/scenario_runner/ /tmp/scenario-runner-master/
+sudo docker cp $CONTAINER_ID:/workspace/leaderboard/ /tmp/leaderboard-master/
+sudo docker cp $CONTAINER_ID:/workspace/CARLA/ /tmp/carla-root-master/
 
-<!--
-Alphadrive also mounts this docker, but not sure what it does
-```bash
-- name: init-myservice
-  image: busybox:1.28
-  command: ['sh', '-c', 'mkdir -m 0777 -p /tmp/efs/$$carla_log_subpath$$ ; mkdir -m 0777 -p /tmp/efs/$$agent_log_subpath$$']
-  volumeMounts:
-    - mountPath: /tmp/efs
-      name: efs-shared
-``` -->
+# 5) Run CARLA
+export DISPLAY=0.1
+sudo docker run -it --rm --net=host --runtime=nvidia \
+#   -e SDL_VIDEODRIVER=x11 \
+ -e DISPLAY=$DISPLAY \
+ -e XAUTHORITY=$XAUTHORITY \
+ -v /tmp/.X11-unix:/tmp/.X11-unix \
+ -v $XAUTHORITY:$XAUTHORITY \
+ --gpus=all \
+ 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator ./CarlaUE4.sh --vulkan -RenderOffScreen
 
-Run the CARLA docker:
-- Problem 1: `error: XDG_RUNTIME_DIR not set in the environment.`. Added SDL_VIDEODRIVER, DISPLAY, XAUTHORITY envs and the two shared volumes
-- Problem 2: `sh: 1: xdg-user-dir: not found`. 
+# 6) Download and run the agent (using a LB 2.0 submitted agent as the test)
+export AGENT_IMAGE=342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-365c2ae6-team-1:1304109c-3e24-4470-a5d3-f2650acd28b0
+sudo docker pull $AGENT_IMAGE
 
-
-```bash
-sudo apt-get install x11-xserver-utils xdg-user-dirs xdg-utils # Install xhost
-export DISPLAY=0
-
-xhost local:root
-docker run -it --rm \
-  -e SDL_VIDEODRIVER=x11 \
-  -e DISPLAY=$DISPLAY \
-  -e XAUTHORITY=$XAUTHORITY \
-  -v /tmp/.X11-unix:/tmp/.X11-unix \
-  -v $XAUTHORITY:$XAUTHORITY \
-  --gpus=all \
- 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator ./CarlaUE4.sh
-```
-
-Download a random agent
-
-```
-echo $AGENT_IMAGE=342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-365c2ae6-team-1:1304109c-3e24-4470-a5d3-f2650acd28b0
-docker pull $AGENT_IMAGE
-```
-
-
-```bash
-docker run -it --rm --net=host --runtime=nvidia --gpus all \
+sudo docker run -it --rm --net=host --runtime=nvidia --gpus all \
     --volume=/tmp/scenario-runner-master/:/workspace/scenario_runner/:rw \
     --volume=/tmp/leaderboard-master/:/workspace/leaderboard/:rw \
     --volume=/tmp/carla-root-master/:/workspace/CARLA/:rw $AGENT_IMAGE /bin/bash
