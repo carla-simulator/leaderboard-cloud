@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: job-test
+spec:
+  template:
+    spec:
+      containers:
+      - name: gpu-container
+        image: busybox:1.28
+        env:
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: all
+        command: ["sh", "-c", "echo foo"]
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+      restartPolicy: Never
+  backoffLimit: 1
