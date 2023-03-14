@@ -60,3 +60,27 @@ kubectl -n kube-system logs -f deployment.apps/cluster-autoscaler
 To run commands inside a pod:
 ```
 kubectl exec -n kube-system -it <POD-NAME> -- <command>
+```
+
+# Other commands
+
+To enter an instance through ssh:
+```
+ssh -i <private-key> ubuntu@<public-ip>
+```
+
+To get the publick key from the private one
+```
+ssh-keygen -y -f <private-key-name>.pem > <public-key-name>.pub
+```
+
+
+# Check NVIDIA-Docker version
+
+```bash
+# Check NVIDIA container toolkit
+nvidia-ctk --version
+
+# Check NVIDIA docker
+nvidia-docker --version
+```

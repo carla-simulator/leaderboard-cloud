@@ -92,10 +92,6 @@ ubuntu-eks/k8s_${KUBERNETES_VERSION}/ubuntu-${UBUNTU_VERSION}/nvidia-${NVIDIA_DR
 - **ubuntu_version**: 20.04
 - **NVIDIA_drivers_version**: (the most recent ones)
 
-
-
-
-
 ### Cluster yaml explanation
 
 When creation the cluster, [alphadrive-cluster.yaml](https://github.com/carla-simulator/alphadrive-infrastructure/blob/main/eks/alphadrive-cluster.yaml) will be used. Here are the meaning of the different configurations:
@@ -114,23 +110,6 @@ When creation the cluster, [alphadrive-cluster.yaml](https://github.com/carla-si
     - **ssh**: Indicates a specific ssh key to allow connection to the nodes through it. Some public keys can be used, or to create a new one, go to *Key Management Service* in AWS. [More info](https://eksctl.io/introduction/#ssh-access)
     - **iam/withAddonPolicies**: additional [policies](https://eksctl.io/usage/iam-policies/) can be added to the node. In this case, three policies will be added, the autoscaler, the [EBS](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html) and the [EFS](https://docs.aws.amazon.com/eks/latest/userguide/efs-csi.html)
 
-
-### kube2iam
-
-```
-NODEGROUP_ROLES=$(
-  aws iam list-instance-profiles | 
-  jq -r '.InstanceProfiles[].InstanceProfileName' |
-  grep eksctl-alphadrive-nodegroup |
-  while read prof_name ; do
-     aws iam get-instance-profile --instance-profile-name $prof_name | jq -r '.InstanceProfile.Roles[] | .RoleName'
-  done
-)
-```
-
-```
-eksctl-alphadrive-nodegroup-basic-NodeInstanceRole-X019JEIFWG2T eksctl-alphadrive-nodegroup-gpu-NodeInstanceRole-1GF9K7650D22I
-```
 
 ## Running CARLA on the instance
 
