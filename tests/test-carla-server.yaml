@@ -1,0 +1,47 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: submission-worker
+  namespace: default
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: submission
+spec:
+  template:
+    spec:
+      serviceAccountName: submission-worker
+      containers:
+        - name: simulator
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo Starting the CARLA server
+              ./CarlaUE4.sh --vulkan
+              echo Stopped the CARLA server
+          env:
+            - name: DISPLAY
+              value: ":0.0"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: SDL_VIDEODRIVER
+              value: "x11"
+          volumeMounts:
+            - mountPath: /tmp/.X11-unix
+              name: x11
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+          securityContext:
+            privileged: true
+      restartPolicy: Never
+      volumes:
+        - name: x11
+          hostPath:
+            path: /tmp/.X11-unix
+  backoffLimit: 0
