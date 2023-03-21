@@ -9,7 +9,7 @@ While we will be using our own base AMI, it will be created on top of a public o
 - **Kubernetes version**
 - **AWS region**
 
-Decide on these two based on the [cluster configuration](TODO_LINK)
+Decide on these two based on the [cluster configuration](config/leaderboard-cluster.yaml)
 
 ### Start a new EC2 machine
 
@@ -26,10 +26,10 @@ Now, click on Review and Launch. Not check it and launch the image. Create a new
 SSH into the machine to configure it. Go to the instance in AWS, get its public IP and enter it with
 
 ```bash
-ssh <key-file> -i ubuntu@<public-ip>
+ssh <private-key-file> -i ubuntu@<public-ip>
 ```
 
-> Note: If the command fails due to the file's permissions being too open, change then by running `chmod 400 <key-file>`
+> Note: If the command fails due to the file's permissions being too open, change then by running `chmod 400 <private-key-file>`
 
 Once inside run the following commands:
 

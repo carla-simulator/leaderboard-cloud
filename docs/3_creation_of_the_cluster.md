@@ -1,13 +1,13 @@
 # Creation of the cluster
 
-To create the cluster on Amazon Web Services you need to execute an `eksctl` command. This command expects one YAML which serves as the configuration file of the cluster. There is already one prepared [here](../config/challenge-cluster.yaml).
+To create the cluster on Amazon Web Services you need to execute an `eksctl` command. This command expects one YAML which serves as the configuration file of the cluster. There is already one prepared [here](../config/leaderboard-cluster.yaml).
 
 However, before executing it, modify the `nodeGroups[gpu].ami` to match the name of the AMI created on the previous section. Check the next section to understand how exactly does the file work
 
 Once modified, execute the following command:
 
 ```bash
-eksctl create cluster -f config/challenge-cluster.yaml --install-nvidia-plugin=false
+eksctl create cluster -f config/leaderboard-cluster.yaml --install-nvidia-plugin=false
 ```
 
 > Take into account that the cluster creation can take up to 30 minutes.
@@ -90,15 +90,27 @@ Optionally, to be able to access the instances through ssh, add the `ssh.publicK
 ssh-keygen -y -f <private-key-file>
 ```
 
-Additionally, the bootstrap commands offer the possibility to run specific commands on instance initialization. Reagrding the `overrideBootstrapCommand`, the recommended commands to us are
+Additionally, the bootstrap commands offer the possibility to run specific commands on instance initialization. Regarding the `overrideBootstrapCommand`, the recommended commands to us are the first two commands. However, this removes the *containerd* configuration changes done when creating the base AMI, so they have to be remade again
 ```yaml
     overrideBootstrapCommand: |
       #!/bin/bash
-      /etc/eks/bootstrap.sh <cluster-name>
-```
-However, this removes the *containerd* configuration changes done when creating the base AMI, so they have to be remade again
-```
-TODO: HAVE BETTER COMMANDS FOR CONTAINERD
+      /etc/eks/bootstrap.sh beta-leaderboard-20
+      sudo echo 'version = 2
+      [plugins]
+        [plugins."io.containerd.grpc.v1.cri"]
+          [plugins."io.containerd.grpc.v1.cri".containerd]
+            default_runtime_name = "nvidia"
+
+            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+                privileged_without_host_devices = false
+                runtime_engine = ""
+                runtime_root = ""
+                runtime_type = "io.containerd.runc.v2"
+                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
+                  BinaryName = "/usr/bin/nvidia-container-runtime"' \
+      > /etc/conatinerd/config.toml
+      sudo systemctl restart containerd
 ```
 
 On the other hand, the `preBootstrapCommands` configure something about the X servers so that CARLA can run using Vulkan (we think)
@@ -155,4 +167,4 @@ kubectl delete -f tests/test-gpu-job.yaml
 ```
 and the autoscaler will automatically remove the previously created pod, as it is no longer necessary.
 
-In case of failure, check the [useful commands](x_useful_commands) section to debug it.
+In case of failure, check the [useful commands](x_useful_commands.md) section to debug it.

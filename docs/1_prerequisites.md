@@ -1,6 +1,6 @@
 # Prerequisites
 
-Let's start by downloading all the dependenciess needed.
+Let's start by downloading all the dependencies needed.
 
 ### AWS CLI
 

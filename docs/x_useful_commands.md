@@ -12,7 +12,7 @@ eksctl create cluster -f <YAML-FILE> --install-nvidia-plugin=false
 eksctl delete cluster --region=<CLUSTER-REGION> --name=<CLUSTER-NAME>
 
 # As an example
-eksctl create cluster -f config/challenge-cluster.yaml --install-nvidia-plugin=false
+eksctl create cluster -f config/leaderboard-cluster.yaml --install-nvidia-plugin=false
 eksctl delete cluster --region=us-east-2 --name=beta-leaderboard-20
 ```
 
