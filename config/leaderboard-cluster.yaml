@@ -59,7 +59,7 @@ nodeGroups:
   - name: submission-worker
     instanceType: g4dn.xlarge
     amiFamily: Ubuntu2004
-    ami: ami-0e75facf0eb5a1c13
+    ami: ami-0fda26e54361a06c8
     desiredCapacity: 0
     minSize: 0
     maxSize: 10
@@ -76,21 +76,21 @@ nodeGroups:
     overrideBootstrapCommand: |
       #!/bin/bash
       /etc/eks/bootstrap.sh beta-leaderboard-20
-      sudo echo 'version = 2
+      sudo bash -c "echo 'version = 2
       [plugins]
-        [plugins."io.containerd.grpc.v1.cri"]
-          [plugins."io.containerd.grpc.v1.cri".containerd]
-            default_runtime_name = "nvidia"
+        [plugins.\"io.containerd.grpc.v1.cri\"]
+          [plugins.\"io.containerd.grpc.v1.cri\".containerd]
+            default_runtime_name = \"nvidia\"
 
-            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
-              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+            [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes]
+              [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nvidia]
                 privileged_without_host_devices = false
-                runtime_engine = ""
-                runtime_root = ""
-                runtime_type = "io.containerd.runc.v2"
-                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
-                  BinaryName = "/usr/bin/nvidia-container-runtime"' \
-      > /etc/conatinerd/config.toml
+                runtime_engine = \"\"
+                runtime_root = \"\"
+                runtime_type = \"io.containerd.runc.v2\"
+                [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nvidia.options]
+                  BinaryName = \"/usr/bin/nvidia-container-runtime\"' \
+      > /etc/containerd/config.toml"
       sudo systemctl restart containerd
     preBootstrapCommands:
       - "grep --quiet tsc /sys/devices/system/clocksource/clocksource0/available_clocksource && sudo bash -c 'echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource'"

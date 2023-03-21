@@ -1,0 +1,104 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: submission-worker
+  namespace: default
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: submission
+spec:
+  template:
+    spec:
+      serviceAccountName: submission-worker
+      nodeSelector:
+        nodegroup-type: gpu-instances
+      initContainers:
+        - name: leaderboard-copy
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20:latest
+          command: [ "sh", "-c", "cp -r /workspace/leaderboard/* /tmp/leaderboard-master/"]
+          volumeMounts:
+            - mountPath: /tmp/leaderboard-master
+              name: leaderboard-master
+        - name: scenario-copy
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20:latest
+          command: [ "sh", "-c", "cp -r /workspace/scenario_runner/* /tmp/scenario-runner-master/"]
+          volumeMounts:
+            - mountPath: /tmp/scenario-runner-master
+              name: scenario-runner-master
+        - name: carla-root-copy
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20:latest
+          command: [ "sh", "-c", "cp -r /workspace/CARLA/* /tmp/carla-root-master/"]
+          volumeMounts:
+            - mountPath: /tmp/carla-root-master
+              name: carla-root-master
+      containers:
+        - name: simulator
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo starting carla
+              ./CarlaUE4.sh
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+        - name: agent
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-365c2ae6-team-1:1304109c-3e24-4470-a5d3-f2650acd28b0
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo sleeping a bit to ensure carla is ready
+              sleep 60
+              echo starting agent
+              bash /workspace/leaderboard/scripts/run_evaluation.sh
+              exit 0
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard-master
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner-master
+            - mountPath: /workspace/CARLA
+              name: carla-root-master
+          env:
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: HTTP_PROXY
+              value: ""
+            - name: HTTPS_PROXY
+              value: ""
+            - name: LEADERBOARD_ROOT
+              value: "/workspace/leaderboard"
+            - name: CARLA_ROOT
+              value: "/workspace/CARLA"
+            - name: SCENARIO_RUNNER_ROOT
+              value: "/workspace/scenario_runner"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_testing.xml"
+            - name: ROUTES_SUBSET
+              value: "0"
+            - name: REPETITIONS
+              value: "1"
+            - name: CHALLENGE_TRACK_CODENAME
+              value: "SENSORS"
+            - name: CHECKPOINT_ENDPOINT
+              value: "/workspace/leaderboard/results.json"
+            - name: DEBUG_CHECKPOINT_ENDPOINT
+              value: "/workspace/leaderboard/live_results.txt"
+            - name: DEBUG_CHALLENGE
+              value: "2"
+            - name: RECORD_PATH
+              value: ""
+            - name: RESUME
+              value: ""
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+      restartPolicy: Never
+  backoffLimit: 0

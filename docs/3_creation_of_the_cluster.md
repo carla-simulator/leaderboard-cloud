@@ -12,7 +12,7 @@ eksctl create cluster -f config/leaderboard-cluster.yaml --install-nvidia-plugin
 
 > Take into account that the cluster creation can take up to 30 minutes. Go to `Cloudformation` in AWS for more details of the cluster status. This is also useful when deleting the cluster.
 
-### Configuration of the YAML
+### (Optional) Understading the configuration YAML
 
 Here are the most important sections of the configuration yaml.
 
@@ -95,22 +95,21 @@ Additionally, the bootstrap commands offer the possibility to run specific comma
     overrideBootstrapCommand: |
       #!/bin/bash
       /etc/eks/bootstrap.sh beta-leaderboard-20
-      sudo echo 'version = 2
+      sudo bash -c "echo 'version = 2
       [plugins]
-        [plugins."io.containerd.grpc.v1.cri"]
-          [plugins."io.containerd.grpc.v1.cri".containerd]
-            default_runtime_name = "nvidia"
+        [plugins.\"io.containerd.grpc.v1.cri\"]
+          [plugins.\"io.containerd.grpc.v1.cri\".containerd]
+            default_runtime_name = \"nvidia\"
 
-            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
-              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+            [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes]
+              [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nvidia]
                 privileged_without_host_devices = false
-                runtime_engine = ""
-                runtime_root = ""
-                runtime_type = "io.containerd.runc.v2"
-                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
-                  BinaryName = "/usr/bin/nvidia-container-runtime"' \
-      > /etc/conatinerd/config.toml
-      sudo systemctl restart containerd
+                runtime_engine = \"\"
+                runtime_root = \"\"
+                runtime_type = \"io.containerd.runc.v2\"
+                [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nvidia.options]
+                  BinaryName = \"/usr/bin/nvidia-container-runtime\"' \
+      > /etc/containerd/config.toml"
 ```
 
 On the other hand, the `preBootstrapCommands` configure something about the X servers so that CARLA can run using Vulkan (we think)

@@ -4,20 +4,21 @@ Before creating the cluster, a base AMI will be created, which will be later use
 
 ### Select a base AMI
 
-While we will be using our own base AMI, it will be created on top of a public one. Go to the [Ubuntu on AWS EKS](https://cloud-images.ubuntu.com/docs/aws/eks/) website and select the image that best fits your needs. There are two criteria to take into account:
+While we will be using our own base AMI, it will be created on top of a public one. Go to the [Ubuntu on AWS EKS](https://cloud-images.ubuntu.com/docs/aws/eks/) website and select the image that best fits your needs. There are three criteria to take into account:
 
 - **Kubernetes version**
 - **AWS region**
+- ***amd* architecture**
 
 Decide on these two based on the [cluster configuration](config/leaderboard-cluster.yaml)
 
 ### Start a new EC2 machine
 
-Go to the AWS EC2 dashboard and, inside the Instances menú, click on `Launch instances`. On the following AMI menu, 
-locate the AMI selected on the previous step and mark it as your selected configuration.
+After selecting the desired AMI at EC2, click on `Launch instances from AMI`, located on the top right corner.
 
-On the next step, you need to select an Instance Type that uses an Nvidia GPU. For this purpose, a `g4dn.xlarge` machine
-is enough. 
+On the next step, decide its (this instance will be later deleted) and select an Instance Type that uses an Nvidia GPU. For this purpose, a `g4dn.xlarge` machine is enough.
+
+For the *Network settings*, make sure the configuration allows to SSH into the machine.
 
 Now, click on Review and Launch. Not check it and launch the image. Create a new key pair if you need to.
 
@@ -26,7 +27,7 @@ Now, click on Review and Launch. Not check it and launch the image. Create a new
 SSH into the machine to configure it. Go to the instance in AWS, get its public IP and enter it with
 
 ```bash
-ssh <private-key-file> -i ubuntu@<public-ip>
+ssh -i <private-key-file> ubuntu@<public-ip>
 ```
 
 > Note: If the command fails due to the file's permissions being too open, change then by running `chmod 400 <private-key-file>`
@@ -51,21 +52,21 @@ sudo /bin/bash NVIDIA-Linux-x86_64-${NVIDIA_DRIVERS_VERSION}.run --accept-licens
 rm NVIDIA-Linux-x86_64-${NVIDIA_DRIVERS_VERSION}.run
 
 # Configure containerd to use NVIDIA Container Runtime
-sudo echo 'version = 2
+sudo bash -c "echo 'version = 2
 [plugins]
-  [plugins."io.containerd.grpc.v1.cri"]
-    [plugins."io.containerd.grpc.v1.cri".containerd]
-      default_runtime_name = "nvidia"
+  [plugins.\"io.containerd.grpc.v1.cri\"]
+    [plugins.\"io.containerd.grpc.v1.cri\".containerd]
+      default_runtime_name = \"nvidia\"
 
-      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
-        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+      [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes]
+        [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nvidia]
           privileged_without_host_devices = false
-          runtime_engine = ""
-          runtime_root = ""
-          runtime_type = "io.containerd.runc.v2"
-          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
-            BinaryName = "/usr/bin/nvidia-container-runtime"' \
-> /etc/conatinerd/config.toml
+          runtime_engine = \"\"
+          runtime_root = \"\"
+          runtime_type = \"io.containerd.runc.v2\"
+          [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nvidia.options]
+            BinaryName = \"/usr/bin/nvidia-container-runtime\"' \
+> /etc/containerd/config.toml"
 
 # Restart containerd
 sudo systemctl restart containerd
