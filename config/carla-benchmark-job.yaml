@@ -101,4 +101,11 @@ spec:
             limits:
               nvidia.com/gpu: 1
       restartPolicy: Never
+      volumes:
+        - name: leaderboard-master
+          emptyDir: {}
+        - name: scenario-runner-master
+          emptyDir: {}
+        - name: carla-root-master
+          emptyDir: {}
   backoffLimit: 0
