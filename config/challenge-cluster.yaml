@@ -48,7 +48,7 @@ iam:
         #- "arn:aws:s3:::"arn:aws:s3:::carla-leaderboard-20-logs"
         - "arn:aws:ecr:*:342236305043:repository/*"
 
-managedNodeGroups:
+nodeGroups:
   - name: autoscaler-worker
     amiFamily: AmazonLinux2
     instanceType: t3.large
@@ -58,8 +58,7 @@ managedNodeGroups:
       nodegroup-type: non-gpu
   - name: submission-worker
     instanceType: g4dn.2xlarge
-    amiFamily: AmazonLinux2
-    # amiFamily: Ubuntu2004
+    amiFamily: Ubuntu2004
     ami: ami-083b8d4b4f7b76f81
     desiredCapacity: 0
     minSize: 0

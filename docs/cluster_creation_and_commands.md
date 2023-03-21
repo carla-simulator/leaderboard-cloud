@@ -62,6 +62,12 @@ To run commands inside a pod:
 kubectl exec -n kube-system -it <POD-NAME> -- <command>
 ```
 
+This, to do that
+```
+kubectl logs -n kube-system <POD-NAME>
+```
+
+
 # Other commands
 
 To enter an instance through ssh:
