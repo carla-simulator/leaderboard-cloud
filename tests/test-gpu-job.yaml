@@ -1,19 +1,16 @@
-apiVersion: batch/v1
-kind: Job
+apiVersion: v1
+kind: Pod
 metadata:
-  name: job-test
+  name: gpu-pod
 spec:
-  template:
-    spec:
-      containers:
-      - name: gpu-container
-        image: busybox:1.28
-        env:
-        - name: NVIDIA_VISIBLE_DEVICES
-          value: all
-        command: ["sh", "-c", "echo foo"]
-        resources:
-          limits:
-            nvidia.com/gpu: 1
-      restartPolicy: Never
-  backoffLimit: 1
+  restartPolicy: Never
+  containers:
+    - name: cuda-container
+      image: nvcr.io/nvidia/k8s/cuda-sample:vectoradd-cuda10.2
+      resources:
+        limits:
+          nvidia.com/gpu: 1 # requesting 1 GPU
+  tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule

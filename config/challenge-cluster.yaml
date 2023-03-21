@@ -65,7 +65,6 @@ nodeGroups:
     maxSize: 10
     volumeSize: 400
     tags:
-      # EC2 tags required for cluster-autoscaler auto-discovery
       k8s.io/cluster-autoscaler/enabled: "true"
       k8s.io/cluster-autoscaler/beta-leaderboard-20: "owned"
     labels:
@@ -77,8 +76,22 @@ nodeGroups:
     overrideBootstrapCommand: |
       #!/bin/bash
       /etc/eks/bootstrap.sh beta-leaderboard-20
-      bash -c "echo -e 'version = 2\n[plugins]\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    [plugins.\"io.containerd.grpc.v1.cri\".containerd]\n      default_runtime_name = \"nvidia\"\n\n      [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes]\n        [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nvidia]\n          privileged_without_host_devices = false\n          runtime_engine = \"\"\n          runtime_root = \"\"\n          runtime_type = \"io.containerd.runc.v2\"\n          [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nvidia.options]\n            BinaryName = \"/usr/bin/nvidia-container-runtime\"' > /etc/containerd/config.toml"
-      bash -c "sudo systemctl restart containerd"
+      sudo echo 'version = 2
+      [plugins]
+        [plugins."io.containerd.grpc.v1.cri"]
+          [plugins."io.containerd.grpc.v1.cri".containerd]
+            default_runtime_name = "nvidia"
+
+            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+                privileged_without_host_devices = false
+                runtime_engine = ""
+                runtime_root = ""
+                runtime_type = "io.containerd.runc.v2"
+                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
+                  BinaryName = "/usr/bin/nvidia-container-runtime"' \
+      > /etc/conatinerd/config.toml
+      sudo systemctl restart containerd
     preBootstrapCommands:
       - "grep --quiet tsc /sys/devices/system/clocksource/clocksource0/available_clocksource && sudo bash -c 'echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource'"
       - "sudo nvidia-xconfig --preserve-busid -a --virtual=1280x1024"
