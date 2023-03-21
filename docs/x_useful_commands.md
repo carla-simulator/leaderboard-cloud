@@ -39,7 +39,7 @@ kubectl logs -n <NAMESPACE> <POD-NAME>
 kubectl exec -n <NAMESPACE> -it <POD-NAME> -- <COMMAND>
 ```
 
-### Instance 
+### Instance
 
 ```bash
 """
@@ -59,3 +59,12 @@ systemctl status containerd
 journalctl -xe --unit containerd
 containerd config dump
 ```
+
+### AWS
+
+Delete AMI:
+1. Go to `EC2`, and then `AMIs`.
+1. Right click on the AMI and select `Deregister AMI`
+1. Remember the linked Snapshot ID shown when deregistering, and go `Snapshots`.
+1. Right click on the Snapshot and select `Delect snapshot`
+

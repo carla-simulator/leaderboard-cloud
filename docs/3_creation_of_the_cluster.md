@@ -10,7 +10,7 @@ Once modified, execute the following command:
 eksctl create cluster -f config/leaderboard-cluster.yaml --install-nvidia-plugin=false
 ```
 
-> Take into account that the cluster creation can take up to 30 minutes.
+> Take into account that the cluster creation can take up to 30 minutes. Go to `Cloudformation` in AWS for more details of the cluster status. This is also useful when deleting the cluster.
 
 ### Configuration of the YAML
 

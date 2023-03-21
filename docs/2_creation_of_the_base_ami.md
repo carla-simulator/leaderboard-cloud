@@ -4,7 +4,7 @@ Before creating the cluster, a base AMI will be created, which will be later use
 
 ### Select a base AMI
 
-While we will be using our own base AMI, it will be created on top of a public one. Go to the [Ubuntu on AWS EKS] website and select the image that best fits your needs. There are two criteria to take into account:
+While we will be using our own base AMI, it will be created on top of a public one. Go to the [Ubuntu on AWS EKS](https://cloud-images.ubuntu.com/docs/aws/eks/) website and select the image that best fits your needs. There are two criteria to take into account:
 
 - **Kubernetes version**
 - **AWS region**
