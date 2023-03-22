@@ -6,6 +6,13 @@ metadata:
   region: us-east-2
   version: "1.24"
 
+iamIdentityMappings:
+  - arn: arn:aws:iam::342236305043:role/LB2-eks-admin
+    groups:
+      - system:masters
+    username: admin
+    noDuplicateARNs: true # prevents shadowing of ARNs
+
 iam:
   withOIDC: true
   serviceAccounts:
