@@ -13,8 +13,8 @@ spec:
   template:
     spec:
       serviceAccountName: submission-worker
-      nodeSelector:
-        nodegroup-type: gpu-instances
+      #nodeSelector:
+        #role: gpu-worker
       initContainers:
         - name: leaderboard-copy
           image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20:latest
@@ -40,8 +40,23 @@ spec:
           command: ["/bin/bash", "-c"]
           args:
             - |
-              echo starting carla
-              ./CarlaUE4.sh
+              echo "Starting CARLA server"
+              ./CarlaUE4.sh --vulkan
+              echo "Stopped CARLA server"
+          env:
+            - name: DISPLAY
+              value: ":0.0"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: SDL_VIDEODRIVER
+              value: "x11"
+          volumeMounts:
+            - mountPath: /tmp/.X11-unix
+              name: x11
+          securityContext:
+            privileged: true
           resources:
             limits:
               nvidia.com/gpu: 1
@@ -50,10 +65,11 @@ spec:
           command: ["/bin/bash", "-c"]
           args:
             - |
-              echo sleeping a bit to ensure carla is ready
+              echo "Sleeping a bit to ensure CARLA is ready"
               sleep 60
-              echo starting agent
+              echo "Starting agent"
               bash /workspace/leaderboard/scripts/run_evaluation.sh
+              echo "Finished agent"
               exit 0
           volumeMounts:
             - mountPath: /workspace/leaderboard
@@ -108,4 +124,7 @@ spec:
           emptyDir: {}
         - name: carla-root-master
           emptyDir: {}
+        - name: x11
+          hostPath:
+            path: /tmp/.X11-unix
   backoffLimit: 0
