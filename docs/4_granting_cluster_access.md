@@ -57,10 +57,7 @@ This creates a new profile called `eks-admin` with the previously created `LB2-e
 
 Lastly, change the kubectl configuration to use the new profile by adding the `eks-admin` profile to the `~/.kube/config` file. This can be done with the following (non very user-friendly) commands.
 ```bash
-sudo snap install yq
-sudo apt install moreutils
-export KUBECONFIG=~/.kube/config  # Default path of the kube config file
-cat $KUBECONFIG | yq e '.users.[].user.exec.args += ["--profile", "eks-admin"]' - -- | sed 's/beta-leaderboard-20./beta-leaderboard-20-admin./g' | sponge $KUBECONFIG
+cat ~/.kube/config | yq e '.users.[].user.exec.args += ["--profile", "eks-admin"]' - -- | sed 's/beta-leaderboard-20./beta-leaderboard-20-admin./g' | sponge ~/.kube/config
 ```
 
 ### Test the user access
@@ -71,4 +68,12 @@ Make sure that the process has been succesfully done by trying to get access to 
 kubectl get nodes
 kubectl describe node <NODE-NAME>
 kubectl logs -n <NAMESPACE> <POD-NAME>
+```
+
+### 2nd cluster and beyond
+
+In the case of the cluster deletion, this configuration will not automatically work for all the other subsequent clusters, even if their names are the same. to update to the new cluster
+```bash
+aws eks update-kubeconfig --region us-east-2 --name beta-leaderboard-20
+cat ~/.kube/config | yq e '.users.[].user.exec.args += ["--profile", "eks-admin"]' - -- | sed 's/beta-leaderboard-20./beta-leaderboard-20-admin./g' | sponge ~/.kube/config
 ```
