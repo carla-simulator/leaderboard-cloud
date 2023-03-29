@@ -45,7 +45,7 @@ sudo docker run -it --rm --net=host --runtime=nvidia \
  342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator ./CarlaUE4.sh --vulkan -RenderOffScreen
 
 # 6) Download and run the agent (using a LB 2.0 submitted agent as the test)
-export AGENT_IMAGE=342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-365c2ae6-team-1:1304109c-3e24-4470-a5d3-f2650acd28b0
+export AGENT_IMAGE=342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
 sudo docker pull $AGENT_IMAGE
 
 sudo docker run -it --rm --net=host --runtime=nvidia --gpus all \

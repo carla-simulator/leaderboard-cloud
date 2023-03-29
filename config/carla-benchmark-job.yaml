@@ -13,8 +13,8 @@ spec:
   template:
     spec:
       serviceAccountName: submission-worker
-      #nodeSelector:
-        #role: gpu-worker
+      # nodeSelector:
+      #   role: gpu-worker
       initContainers:
         - name: leaderboard-copy
           image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20:latest
@@ -61,7 +61,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-365c2ae6-team-1:1304109c-3e24-4470-a5d3-f2650acd28b0
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -97,8 +97,6 @@ spec:
               value: "/workspace/scenario_runner"
             - name: ROUTES
               value: "/workspace/leaderboard/data/routes_testing.xml"
-            - name: ROUTES_SUBSET
-              value: "0"
             - name: REPETITIONS
               value: "1"
             - name: CHALLENGE_TRACK_CODENAME
@@ -113,9 +111,9 @@ spec:
               value: ""
             - name: RESUME
               value: ""
-          resources:
-            limits:
-              nvidia.com/gpu: 1
+          # resources:
+          #   limits:
+          #     nvidia.com/gpu: 1
       restartPolicy: Never
       volumes:
         - name: leaderboard-master
