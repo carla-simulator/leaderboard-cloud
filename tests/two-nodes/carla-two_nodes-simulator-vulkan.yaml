@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: simulator-a92f57
+  labels:
+    app: carla
+    session: a92f57
+spec:
+  containers:
+    - name: simulator
+      image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator:latest
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          echo "Starting CARLA server"
+          ./CarlaUE4.sh -vulkan
+          echo "Stopped CARLA server"
+      env:
+        - name: DISPLAY
+          value: ":0.0"
+        - name: OMP_PROC_BIND
+          value: "FALSE"
+        - name: OMP_NUM_THREADS
+          value: "64"
+        - name: SDL_VIDEODRIVER
+          value: "x11"
+      volumeMounts:
+        - mountPath: /tmp/.X11-unix
+          name: x11
+      resources:
+        limits:
+          nvidia.com/gpu: "1"
+      securityContext:
+        privileged: true
+  volumes:
+    - name: x11
+      hostPath:
+        path: /tmp/.X11-unix
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: simulator-a92f57
+  labels:
+    app: carla
+    session: a92f57
+spec:
+  selector:
+    app: carla
+    session: a92f57
+  ports:
+    - name: up
+      protocol: TCP
+      port: 2000
+      targetPort: 2000
+    - name: down
+      protocol: TCP
+      port: 2001
+      targetPort: 2001
