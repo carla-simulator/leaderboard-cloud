@@ -36,7 +36,6 @@ sudo docker cp $CONTAINER_ID:/workspace/CARLA/ /tmp/carla-root-master/
 # 5) Run CARLA
 export DISPLAY=0.1
 sudo docker run -it --rm --net=host --runtime=nvidia \
-#   -e SDL_VIDEODRIVER=x11 \
  -e DISPLAY=$DISPLAY \
  -e XAUTHORITY=$XAUTHORITY \
  -v /tmp/.X11-unix:/tmp/.X11-unix \
@@ -49,8 +48,9 @@ export AGENT_IMAGE=342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team
 sudo docker pull $AGENT_IMAGE
 
 sudo docker run -it --rm --net=host --runtime=nvidia --gpus all \
+    -e ROUTES=/workspace/leaderboard/data/routes_testing.xml
     --volume=/tmp/scenario-runner-master/:/workspace/scenario_runner/:rw \
     --volume=/tmp/leaderboard-master/:/workspace/leaderboard/:rw \
-    --volume=/tmp/carla-root-master/:/workspace/CARLA/:rw $AGENT_IMAGE /bin/bash
+    --volume=/tmp/carla-root-master/:/workspace/CARLA/:rw $AGENT_IMAGE leaderboard/scripts/run_evaluation.s
 ```
 
