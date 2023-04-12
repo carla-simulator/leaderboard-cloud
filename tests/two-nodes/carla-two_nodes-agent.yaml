@@ -55,6 +55,7 @@ spec:
               bash /workspace/leaderboard/scripts/run_evaluation.sh
 
               echo "Finished agent"
+              sleep 100000
               exit 0
           volumeMounts:
             - mountPath: /workspace/leaderboard
@@ -87,7 +88,7 @@ spec:
             - name: ROUTES
               value: "/workspace/leaderboard/data/routes_testing.xml"
             - name: ROUTES_SUBSET
-              value: ""
+              value: "2,4,5,6"
             - name: REPETITIONS
               value: "1"
             - name: CHALLENGE_TRACK_CODENAME

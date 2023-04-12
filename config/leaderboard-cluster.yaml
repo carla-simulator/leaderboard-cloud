@@ -3,7 +3,7 @@ kind: ClusterConfig
 
 metadata:
   name: beta-leaderboard-20
-  region: us-east-2
+  region: us-west-2
   version: "1.24"
 
 iamIdentityMappings:
@@ -64,9 +64,9 @@ nodeGroups:
     labels:
       role: basic-worker
   - name: submission-worker
-    instanceType: g4dn.2xlarge
+    instanceType: g5.4xlarge
     amiFamily: Ubuntu2004
-    ami: ami-0fda26e54361a06c8
+    ami: ami-0677ecafaf6e0de2f
     desiredCapacity: 0
     minSize: 0
     maxSize: 10
