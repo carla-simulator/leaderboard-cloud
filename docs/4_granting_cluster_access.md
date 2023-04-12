@@ -45,6 +45,7 @@ After the cluster is created, it is time to configure the users other than the c
 ```
 aws eks update-kubeconfig --region us-east-2 --name beta-leaderboard-20
 ```
+> Note: If the command fails with `'NoneType' object is not iterable`, remove the `~/.kube` folder.
 
 Now, we have to tell AWS to use the correct credentials to access the cluster. To avoid modifying the *default* user profile (which can rsult in future issues), it is recommended to create and use a new one. As such, go to `~/.aws/config` and add
 ```bash
@@ -57,6 +58,8 @@ This creates a new profile called `eks-admin` with the previously created `LB2-e
 
 Lastly, change the kubectl configuration to use the new profile by adding the `eks-admin` profile to the `~/.kube/config` file. This can be done with the following (non very user-friendly) commands.
 ```bash
+sudo snap install yq
+sudo apt install moreutils
 cat ~/.kube/config | yq e '.users.[].user.exec.args += ["--profile", "eks-admin"]' - -- | sed 's/beta-leaderboard-20./beta-leaderboard-20-admin./g' | sponge ~/.kube/config
 ```
 
