@@ -41,7 +41,7 @@ spec:
           args:
             - |
               echo "Starting CARLA server"
-              # ./CarlaUE4.sh -trace=counters,cpu,frame,bookmark,gpu -tracefile=ue4_trace.utrace &> server_data.txt
+              ./CarlaUE4.sh -trace=counters,cpu,frame,bookmark,gpu -tracefile=ue4_trace.utrace &> server_data.txt
               sleep 20000
               echo "Stopped CARLA server"
           env:
