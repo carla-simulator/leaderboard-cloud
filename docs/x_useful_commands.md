@@ -84,5 +84,5 @@ kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.1
 kubectl apply -f config/cluster-autoscaler-autodiscover.yaml
 
 # Cluster deletion
-eksctl delete cluster --region=us-east-2 --name=beta-leaderboard-20
+eksctl delete cluster --region=us-west-2 --name=beta-leaderboard-20
 ```

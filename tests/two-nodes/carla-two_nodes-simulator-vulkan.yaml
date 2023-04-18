@@ -8,12 +8,12 @@ metadata:
 spec:
   containers:
     - name: simulator
-      image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator:latest
+      image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
       command: ["/bin/bash", "-c"]
       args:
         - |
           echo "Starting CARLA server"
-          ./CarlaUE4.sh -vulkan
+          ./CarlaUE4.sh -vulkan -RenderOffScreen -nosound
           echo "Stopped CARLA server"
       env:
         - name: DISPLAY

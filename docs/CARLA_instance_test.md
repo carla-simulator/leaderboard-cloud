@@ -48,9 +48,9 @@ export AGENT_IMAGE=342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team
 sudo docker pull $AGENT_IMAGE
 
 sudo docker run -it --rm --net=host --runtime=nvidia --gpus all \
-    -e ROUTES=/workspace/leaderboard/data/routes_testing.xml
+    -e ROUTES=/workspace/leaderboard/data/routes_testing.xml \
     --volume=/tmp/scenario-runner-master/:/workspace/scenario_runner/:rw \
     --volume=/tmp/leaderboard-master/:/workspace/leaderboard/:rw \
-    --volume=/tmp/carla-root-master/:/workspace/CARLA/:rw $AGENT_IMAGE leaderboard/scripts/run_evaluation.s
+    --volume=/tmp/carla-root-master/:/workspace/CARLA/:rw $AGENT_IMAGE leaderboard/scripts/run_evaluation.sh
 ```
 

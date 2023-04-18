@@ -17,32 +17,34 @@ spec:
         #role: gpu-worker
       initContainers:
         - name: leaderboard-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
           command: [ "sh", "-c", "cp -r /workspace/leaderboard/* /tmp/leaderboard-master/"]
           volumeMounts:
             - mountPath: /tmp/leaderboard-master
               name: leaderboard-master
         - name: scenario-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
           command: [ "sh", "-c", "cp -r /workspace/scenario_runner/* /tmp/scenario-runner-master/"]
           volumeMounts:
             - mountPath: /tmp/scenario-runner-master
               name: scenario-runner-master
         - name: carla-root-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
           command: [ "sh", "-c", "cp -r /workspace/CARLA/* /tmp/carla-root-master/"]
           volumeMounts:
             - mountPath: /tmp/carla-root-master
               name: carla-root-master
       containers:
         - name: simulator
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-development:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
               echo "Starting CARLA server"
-              ./CarlaUE4.sh --vulkan
+              ./CarlaUE4.sh -vulkan -RenderOffScreen -nosound
               echo "Stopped CARLA server"
+              sleep 20000
+              exit 0
           env:
             - name: DISPLAY
               value: ":0.0"
@@ -70,6 +72,7 @@ spec:
               echo "Starting agent"
               bash /workspace/leaderboard/scripts/run_evaluation.sh
               echo "Finished agent"
+              sleep 20000
               exit 0
           volumeMounts:
             - mountPath: /workspace/leaderboard
@@ -108,14 +111,14 @@ spec:
             - name: DEBUG_CHECKPOINT_ENDPOINT
               value: "/workspace/leaderboard/live_results.txt"
             - name: DEBUG_CHALLENGE
-              value: "2"
+              value: "0"
             - name: RECORD_PATH
-              value: ""
+              value: "/home/carla"
             - name: RESUME
               value: ""
-          #resources:
-            #limits:
-              #nvidia.com/gpu: 1
+          # resources:
+          #   limits:
+          #     nvidia.com/gpu: 1
       restartPolicy: Never
       volumes:
         - name: leaderboard-master
