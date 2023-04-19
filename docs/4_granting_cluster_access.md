@@ -77,6 +77,6 @@ kubectl logs -n <NAMESPACE> <POD-NAME>
 
 In the case of the cluster deletion, this configuration will not automatically work for all the other subsequent clusters, even if their names are the same. to update to the new cluster
 ```bash
-aws eks update-kubeconfig --region us-east-2 --name beta-leaderboard-20
+aws eks update-kubeconfig --region us-west-2 --name beta-leaderboard-20
 cat ~/.kube/config | yq e '.users.[].user.exec.args += ["--profile", "eks-admin"]' - -- | sed 's/beta-leaderboard-20./beta-leaderboard-20-admin./g' | sponge ~/.kube/config
 ```
