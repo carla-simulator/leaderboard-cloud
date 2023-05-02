@@ -46,7 +46,7 @@ distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
 sudo apt-get update && sudo apt-get install -y nvidia-container-runtime && sudo rm -rf /var/lib/apt/lists/*
 
 # Install Nvidia Drivers
-NVIDIA_DRIVERS_VERSION="525.89.02"  # IMPORTANT: It is recommended to always use the most recent one
+NVIDIA_DRIVERS_VERSION="470.182.03"  # IMPORTANT: This are the recommended drivers to use.
 wget http://download.nvidia.com/XFree86/Linux-x86_64/${NVIDIA_DRIVERS_VERSION}/NVIDIA-Linux-x86_64-${NVIDIA_DRIVERS_VERSION}.run
 sudo /bin/bash NVIDIA-Linux-x86_64-${NVIDIA_DRIVERS_VERSION}.run --accept-license --no-questions --ui=none
 rm NVIDIA-Linux-x86_64-${NVIDIA_DRIVERS_VERSION}.run

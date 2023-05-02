@@ -8,27 +8,30 @@ metadata:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: submission
+  name: submission-parallel
 spec:
   template:
     spec:
       serviceAccountName: submission-worker
-      #nodeSelector:
-        #role: gpu-worker
+      nodeSelector:
+        node.kubernetes.io/instance-type: g4dn.12xlarge
       initContainers:
         - name: leaderboard-copy
+          #image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing@sha256:5197243778bef3cc0342eb99cca030625d2343292451addf1018752262176d95
           image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
           command: [ "sh", "-c", "cp -r /workspace/leaderboard/* /tmp/leaderboard-master/"]
           volumeMounts:
             - mountPath: /tmp/leaderboard-master
               name: leaderboard-master
         - name: scenario-copy
+          #image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing@sha256:5197243778bef3cc0342eb99cca030625d2343292451addf1018752262176d95
           image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
           command: [ "sh", "-c", "cp -r /workspace/scenario_runner/* /tmp/scenario-runner-master/"]
           volumeMounts:
             - mountPath: /tmp/scenario-runner-master
               name: scenario-runner-master
         - name: carla-root-copy
+          #image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing@sha256:5197243778bef3cc0342eb99cca030625d2343292451addf1018752262176d95
           image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
           command: [ "sh", "-c", "cp -r /workspace/CARLA/* /tmp/carla-root-master/"]
           volumeMounts:
@@ -38,21 +41,23 @@ spec:
         # First set of simulator + agent
         - name: simulator
           image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-development:latest
+          #image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
               echo "Starting CARLA server"
-              ./CarlaUE4.sh -vulkan -carla-rpc-port=2000 -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=0
+              #./CarlaUE4.sh -vulkan -carla-rpc-port=2000 -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=0 -trace=counters,cpu,frame,bookmark,gpu -tracefile=sim1.utrace -d3ddebug
+              ./CarlaUE4.sh -vulkan -carla-rpc-port=2000 -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=0 -ini:[/Script/Engine.RendererSettings]:r.Vulkan.GPUValidation=2 -ini:[/Script/Engine.RendererSettings]:r.Vulkan.StandardValidation=2 -ini:[/Script/Engine.RendererSettings]:r.Vulkan.WaitForIdleOnSubmit=1 -trace=counters,cpu,frame,bookmark,gpu -tracefile=sim1.utrace -gpucrashdebugging
               echo "Stopped CARLA server"
-              sleep 20000
+              sleep 86400
               exit 0
           env:
             - name: DISPLAY
               value: ":0"
-            # - name: OMP_PROC_BIND
-            #   value: "FALSE"
-            # - name: OMP_NUM_THREADS
-            #   value: "64"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
             - name: SDL_VIDEODRIVER
               value: "x11"
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -67,13 +72,15 @@ spec:
           resources:
             limits:
               nvidia.com/gpu: 1
+              #cpu: 12.0  # 1000m is equal to 1 VCPU core
+              #cpu: "12000m"  # 1000m is equal to 1 VCPU core
         - name: agent
           image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
           command: ["/bin/bash", "-c"]
           args:
             - |
               echo "Sleeping a bit to ensure CARLA is ready"
-              sleep 60
+              sleep 30
               echo "Starting agent"
 
               echo "python3 ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator.py \
@@ -107,14 +114,14 @@ spec:
               value: "2000"
             - name: CARLA_TM_PORT
               value: "8000"
-            # - name: OMP_PROC_BIND
-            #   value: "FALSE"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "2"
-            # - name: OMP_NUM_THREADS
-            #   value: "64"
+            - name: OMP_NUM_THREADS
+              value: "64"
             - name: HTTP_PROXY
               value: ""
             - name: HTTPS_PROXY
@@ -140,30 +147,33 @@ spec:
             - name: DEBUG_CHALLENGE
               value: "0"
             - name: RECORD_PATH
-              value: ""
+              value: "/home/carla"
             - name: RESUME
               value: ""
           resources:
             limits:
               nvidia.com/gpu: 1
+              #cpu: 12.0  # 1000m is equal to 1 VCPU core
         # Second set of simulator + agent
         - name: simulator-2
+          #image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
           image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-development:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
               echo "Starting CARLA server"
-              ./CarlaUE4.sh -vulkan -carla-rpc-port=3000 -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=1
+              #./CarlaUE4.sh -vulkan -carla-rpc-port=3000 -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=1 -trace=counters,cpu,frame,bookmark,gpu -tracefile=sim2.utrace -d3ddebug
+              ./CarlaUE4.sh -vulkan -carla-rpc-port=3000 -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=1 -ini:[/Script/Engine.RendererSettings]:r.Vulkan.GPUValidation=2 -ini:[/Script/Engine.RendererSettings]:r.Vulkan.StandardValidation=2 -ini:[/Script/Engine.RendererSettings]:r.Vulkan.WaitForIdleOnSubmit=1 -trace=counters,cpu,frame,bookmark,gpu -tracefile=sim2.utrace -gpucrashdebugging
               echo "Stopped CARLA server"
               sleep 20000
               exit 0
           env:
             - name: DISPLAY
               value: ":0"
-            # - name: OMP_PROC_BIND
-            #   value: "FALSE"
-            # - name: OMP_NUM_THREADS
-            #   value: "64"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
             - name: SDL_VIDEODRIVER
               value: "x11"
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -178,13 +188,14 @@ spec:
           resources:
             limits:
               nvidia.com/gpu: 1
+              #cpu: 12.0  # 1000m is equal to 1 VCPU core
         - name: agent-2
           image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
           command: ["/bin/bash", "-c"]
           args:
             - |
               echo "Sleeping a bit to ensure CARLA is ready"
-              sleep 60
+              sleep 30
               echo "Starting agent"
 
               echo "python3 ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator.py \
@@ -218,14 +229,14 @@ spec:
               value: "3000"
             - name: CARLA_TM_PORT
               value: "9000"
-            # - name: OMP_PROC_BIND
-            #   value: "FALSE"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "3"
-            # - name: OMP_NUM_THREADS
-            #   value: "64"
+            - name: OMP_NUM_THREADS
+              value: "64"
             - name: HTTP_PROXY
               value: ""
             - name: HTTPS_PROXY
@@ -251,12 +262,13 @@ spec:
             - name: DEBUG_CHALLENGE
               value: "0"
             - name: RECORD_PATH
-              value: ""
+              value: "/home/carla"
             - name: RESUME
               value: ""
           resources:
             limits:
               nvidia.com/gpu: 1
+              #cpu: 11  # 1000m is equal to 1 VCPU core
       restartPolicy: Never
       volumes:
         - name: leaderboard-master

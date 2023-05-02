@@ -1,28 +1,30 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: agent-a92f57
+  name: agent-a92f57-exp2
   labels:
     app: carla
-    session: a92f57
+    session: a92f57-exp2
 spec:
   template:
     spec:
+      nodeSelector:
+        node.kubernetes.io/instance-type: g5.4xlarge
       initContainers:
         - name: leaderboard-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
           command: [ "sh", "-c", "cp -r /workspace/leaderboard/* /tmp/leaderboard-master/"]
           volumeMounts:
             - mountPath: /tmp/leaderboard-master
               name: leaderboard-master
         - name: scenario-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
           command: [ "sh", "-c", "cp -r /workspace/scenario_runner/* /tmp/scenario-runner-master/"]
           volumeMounts:
             - mountPath: /tmp/scenario-runner-master
               name: scenario-runner-master
         - name: carla-root-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
           command: [ "sh", "-c", "cp -r /workspace/CARLA/* /tmp/carla-root-master/"]
           volumeMounts:
             - mountPath: /tmp/carla-root-master
@@ -34,7 +36,7 @@ spec:
           args:
             - |
               echo "Sleeping a bit to ensure CARLA is ready"
-              sleep 60
+              sleep 1800
               echo "Starting agent"
 
               echo "python3 ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator.py \
@@ -55,7 +57,7 @@ spec:
               bash /workspace/leaderboard/scripts/run_evaluation.sh
 
               echo "Finished agent"
-              sleep 100000
+              sleep 86400
               exit 0
           volumeMounts:
             - mountPath: /workspace/leaderboard
@@ -66,7 +68,7 @@ spec:
               name: carla-root-master
           env:
             - name: CARLA_AGENT_HOST
-              value: "simulator-a92f57"  # TODO Requires automation
+              value: "simulator-a92f57-exp2"  # TODO Requires automation
             - name: CARLA_AGENT_PORT
               value: "2000"
             - name: OMP_PROC_BIND
@@ -86,7 +88,7 @@ spec:
             - name: SCENARIO_RUNNER_ROOT
               value: "/workspace/scenario_runner"
             - name: ROUTES
-              value: "/workspace/leaderboard/data/routes_testing.xml"
+              value: "/workspace/leaderboard/data/routes_devtest.xml"
             - name: ROUTES_SUBSET
               value: "0"
             - name: REPETITIONS
@@ -98,9 +100,9 @@ spec:
             - name: DEBUG_CHECKPOINT_ENDPOINT
               value: "/workspace/leaderboard/live_results.txt"
             - name: DEBUG_CHALLENGE
-              value: "2"
+              value: "0"
             - name: RECORD_PATH
-              value: ""
+              value: "/home/carla"
             - name: RESUME
               value: ""
           resources:

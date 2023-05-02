@@ -66,7 +66,7 @@ nodeGroups:
   - name: submission-worker
     instanceType: g5.4xlarge
     amiFamily: Ubuntu2004
-    ami: ami-0677ecafaf6e0de2f
+    ami: ami-05c54e41645c675fe
     desiredCapacity: 0
     minSize: 0
     maxSize: 10

@@ -1,14 +1,16 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: simulator-a92f57
+  name: simulator-a92f57-exp2
   labels:
     app: carla
-    session: a92f57
+    session: a92f57-exp2
 spec:
+  nodeSelector:
+    node.kubernetes.io/instance-type: g5.4xlarge
   containers:
     - name: simulator
-      image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+      image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator:latest
       command: ["/bin/bash", "-c"]
       args:
         - |
@@ -40,14 +42,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: simulator-a92f57
+  name: simulator-a92f57-exp2
   labels:
     app: carla
-    session: a92f57
+    session: a92f57-exp2
 spec:
   selector:
     app: carla
-    session: a92f57
+    session: a92f57-exp2
   ports:
     - name: up
       protocol: TCP
