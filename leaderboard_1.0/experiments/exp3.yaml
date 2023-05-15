@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: submission-worker-exp3
+  name: submission-worker
   namespace: default
 ---
 apiVersion: batch/v1
@@ -12,7 +12,7 @@ metadata:
 spec:
   template:
     spec:
-      serviceAccountName: submission-worker-exp3
+      serviceAccountName: submission-worker
       nodeSelector:
         node.kubernetes.io/instance-type: g5.12xlarge
       initContainers:
