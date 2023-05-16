@@ -1,0 +1,136 @@
+#@include file-fluent.conffluentd
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: kube-system
+  labels:
+    k8s-app: fluent-bit
+data:
+  fluent-bit.conf: |
+    [INPUT]
+        Name                tail
+        Tag                 kube.*
+        Path                /var/log/containers/*simulator*.log, /var/log/containers/*agent*.log
+        # The two below seem to make it so that some simulator logs aren't sent, dunno why
+        # Mem_Buf_Limit       200MB
+        # Skip_Long_Lines     On
+
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Merge_Log           On
+        Keep_Log            Off
+        K8S-Logging.Parser  On
+        K8S-Logging.Exclude On
+
+    [OUTPUT]
+        Name                cloudwatch_logs
+        Match               kube.*
+        region              us-west-2
+        log_group_name      leaderboard-20-tests
+        log_stream_prefix   counter-test-
+        auto_create_group   false
+
+    # [OUTPUT]
+    #     Name                stdout
+    #     Match               kube.*
+    #     Format              json
+    #     Json_date_key       timestamp
+    #     Json_date_format    iso8601
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fluent-bit-role
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+      - pods
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fluent-bit-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fluent-bit-role
+subjects:
+  - kind: ServiceAccount
+    name: fluent-bit
+    namespace: kube-system
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluent-bit
+  namespace: kube-system
+  labels:
+    k8s-app: fluent-bit
+    version: v1
+    kubernetes.io/cluster-service: "true"
+spec:
+  selector:
+    matchLabels:
+      k8s-app: fluent-bit
+      version: v1
+      kubernetes.io/cluster-service: "true"
+  template:
+    metadata:
+      labels:
+        k8s-app: fluent-bit
+        version: v1
+        kubernetes.io/cluster-service: "true"
+    spec:
+      serviceAccount: fluent-bit
+      serviceAccountName: fluent-bit
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      containers:
+      - name: fluent-bit
+        image: public.ecr.aws/aws-observability/aws-for-fluent-bit:stable
+        env:
+          - name: CLUSTER-NAME
+            value: beta-leaderboard-10
+          - name: AWS_REGION
+            value: us-west-2
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 500m
+            memory: 200Mi
+        volumeMounts:
+        - name: fluent-bitstate
+          mountPath: /var/fluent-bit/state
+        - name: fluent-bit-config
+          mountPath: /fluent-bit/etc/
+        - name: varlog
+          mountPath: /var/log
+          readOnly: true
+        - name: varlibdockercontainers
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: varlibdockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
+      - name: fluent-bitstate
+        hostPath:
+          path: /var/fluent-bit/state
+      - name: fluent-bit-config
+        configMap:
+          name: fluent-bit-config
