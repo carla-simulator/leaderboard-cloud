@@ -17,7 +17,7 @@ iam:
   withOIDC: true
   serviceAccounts:
   - metadata:
-      name: fluent-bit
+      name: fluentd
       namespace: kube-system
     attachPolicy:
       Version: "2012-10-17"

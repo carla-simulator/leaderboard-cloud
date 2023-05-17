@@ -11,10 +11,18 @@ data:
     [INPUT]
         Name                tail
         Tag                 kube.*
-        Path                /var/log/containers/*simulator*.log, /var/log/containers/*agent*.log
-        # The two below seem to make it so that some simulator logs aren't sent, dunno why
-        # Mem_Buf_Limit       200MB
-        # Skip_Long_Lines     On
+        Path                /var/log/containers/*agent*.log, /var/log/containers/*simulator*.log
+        # Parser              cri
+        Mem_Buf_Limit       200MB
+        Skip_Long_Lines     On
+
+    # [PARSER]
+    #     # http://rubular.com/r/tjUt3Awgg4
+    #     Name cri
+    #     Format regex
+    #     Regex ^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<message>.*)$
+    #     Time_Key    time
+    #     Time_Format %Y-%m-%dT%H:%M:%S.%L%z
 
     [FILTER]
         Name                kubernetes
@@ -29,8 +37,8 @@ data:
         Match               kube.*
         region              us-west-2
         log_group_name      leaderboard-20-tests
-        log_stream_prefix   counter-test-
-        auto_create_group   false
+        log_stream_prefix   test1-
+        auto_create_group   Off
 
     # [OUTPUT]
     #     Name                stdout
@@ -65,7 +73,7 @@ roleRef:
   name: fluent-bit-role
 subjects:
   - kind: ServiceAccount
-    name: fluent-bit
+    name: fluent-bit                # Remember to set this to match the SA at the leaderboard-1.0-cluster.yaml
     namespace: kube-system
 ---
 apiVersion: apps/v1
@@ -90,8 +98,8 @@ spec:
         version: v1
         kubernetes.io/cluster-service: "true"
     spec:
-      serviceAccount: fluent-bit
-      serviceAccountName: fluent-bit
+      serviceAccount: fluent-bit          # Remember to set this to match the SA at the leaderboard-1.0-cluster.yaml
+      serviceAccountName: fluent-bit      # Remember to set this to match the SA at the leaderboard-1.0-cluster.yaml
       tolerations:
       - key: node-role.kubernetes.io/master
         effect: NoSchedule

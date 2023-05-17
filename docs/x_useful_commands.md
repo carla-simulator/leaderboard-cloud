@@ -75,14 +75,20 @@ Here is a series of frequent commands used during the cluster development
 
 ```bash
 # Cluster creation
-eksctl create cluster -f config/leaderboard-cluster.yaml --install-nvidia-plugin=false
+eksctl create cluster -f leaderboard_1.0/config/leaderboard-10-cluster.yaml --install-nvidia-plugin=false
 
 # Nvidia Device Plugin
 kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.13.0/nvidia-device-plugin.yml
 
 # Cluster autoscaler
-kubectl apply -f config/cluster-autoscaler-autodiscover.yaml
+kubectl apply -f leaderboard_1.0/config/cluster-autoscaler-autodiscover.yaml
+
+# Fluentd
+kubectl apply -f leaderboard_1.0/config/fluentd.yaml
+kubectl apply -f leaderboard_1.0/experiments/exp3.yaml
 
 # Cluster deletion
-eksctl delete cluster --region=us-west-2 --name=beta-leaderboard-20
+kubectl delete -f leaderboard_1.0/config/fluentd.yaml
+kubectl delete -f leaderboard_1.0/experiments/exp3.yaml
+eksctl delete cluster --region=us-west-2 --name=beta-leaderboard-10
 ```
