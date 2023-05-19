@@ -11,7 +11,7 @@ data:
     <source>
       @type tail
       @id in_tail_container_logs
-      path "/var/log/containers/*.log"
+      path /var/log/containers/*simulator*.log, /var/log/containers/*agent*.log
       # exclude_path "/var/log/containers/fluent*"
       pos_file "/var/log/fluentd-containers.log.pos"
       tag "kubernetes.*"
@@ -30,8 +30,8 @@ data:
     <match kubernetes.**>
       @type cloudwatch_logs
       @id out_cloudwatch_logs
-      region us-west-2
-      log_group_name leaderboard-20-tests
+      region "#{ENV['AWS_REGION']}"
+      log_group_name "#{ENV['LOG_GROUP_NAME']}"
       aws_instance_profile_credentials_retries 5
       auto_create_stream true
       use_tag_as_stream true
@@ -103,6 +103,8 @@ spec:
             value: beta-leaderboard-10
           - name: AWS_REGION
             value: us-west-2
+          - name: LOG_GROUP_NAME
+            value: leaderboard-20-tests
         resources:
           limits:
             memory: 200Mi
