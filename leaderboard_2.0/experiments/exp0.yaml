@@ -17,19 +17,19 @@ spec:
         node.kubernetes.io/instance-type: g5.4xlarge
       initContainers:
         - name: leaderboard-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing@sha256:5197243778bef3cc0342eb99cca030625d2343292451addf1018752262176d95
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
           command: [ "sh", "-c", "cp -r /workspace/leaderboard/* /tmp/leaderboard-master/"]
           volumeMounts:
             - mountPath: /tmp/leaderboard-master
               name: leaderboard-master
         - name: scenario-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing@sha256:5197243778bef3cc0342eb99cca030625d2343292451addf1018752262176d95
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
           command: [ "sh", "-c", "cp -r /workspace/scenario_runner/* /tmp/scenario-runner-master/"]
           volumeMounts:
             - mountPath: /tmp/scenario-runner-master
               name: scenario-runner-master
         - name: carla-root-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing@sha256:5197243778bef3cc0342eb99cca030625d2343292451addf1018752262176d95
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
           command: [ "sh", "-c", "cp -r /workspace/CARLA/* /tmp/carla-root-master/"]
           volumeMounts:
             - mountPath: /tmp/carla-root-master
@@ -99,7 +99,7 @@ spec:
             - name: SCENARIO_RUNNER_ROOT
               value: "/workspace/scenario_runner"
             - name: ROUTES
-              value: "/workspace/leaderboard/data/routes_testing.xml"
+              value: "/workspace/leaderboard/data/routes_devtest.xml"
             - name: ROUTES_SUBSET
               value: "0"
             - name: REPETITIONS

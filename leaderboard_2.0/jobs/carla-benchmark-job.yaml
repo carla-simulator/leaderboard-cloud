@@ -1,0 +1,332 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: submission-parallel
+spec:
+  template:
+    spec:
+      serviceAccountName: submission-worker
+      nodeSelector:
+        node.kubernetes.io/instance-type: g5.12xlarge
+
+      initContainers:
+        - name: private-contents
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              cp -r ${LEADERBOARD_ROOT}/* /tmp/leaderboard/
+              cp -r ${SCENARIO_RUNNER_ROOT}/* /tmp/scenario_runner/
+              cp -r ${CARLA_PYTHON_API_ROOT}/* /tmp/CARLA/
+
+              mkdir -m 0777 -p /tmp/logs/agent{1..4}
+              mkdir -m 0777 -p /tmp/logs/simulator
+          volumeMounts:
+            - mountPath: /tmp/leaderboard
+              name: leaderboard
+            - mountPath: /tmp/scenario_runner
+              name: scenario-runner
+            - mountPath: /tmp/CARLA
+              name: carla-python-api
+            - mountPath: /tmp/logs
+              name: logs
+
+      containers:
+        # First set of simulator + agent
+        - name: simulator-1
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Starting CARLA server"
+              ./CarlaUE4.sh -vulkan -carla-rpc-port=${CARLA_PORT} -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=${NVIDIA_VISIBLE_DEVICES}
+              echo "Stopped CARLA server"
+              sleep 86400
+              exit 0
+          env:
+            - name: CARLA_PORT
+              value: "2000"
+            - name: DISPLAY
+              value: ":0"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "48"
+            - name: SDL_VIDEODRIVER
+              value: "x11"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "0"
+          volumeMounts:
+            - mountPath: /tmp/.X11-unix
+              name: x11
+            - mountPath: /home/carla/CarlaUE4/Saved
+              name: logs
+              subPath: simulator
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+        - name: agent-1
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              bash /workspace/leaderboard/run_leaderboard.sh
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner
+            - mountPath: /workspace/CARLA
+              name: carla-python-api
+            - mountPath: /tmp/agent
+              name: logs
+              subPath: agent1
+          env:
+            - name: CARLA_PORT
+              value: "2000"
+            - name: CHALLENGE_TRACK_CODENAME
+              value: "SENSORS"
+            - name: ROUTES_SUBSET
+              value: "0"
+            - name: RESUME
+              value: ""
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "0"
+
+        # Second set of simulator + agent
+        - name: simulator-2
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Starting CARLA server"
+              ./CarlaUE4.sh -vulkan -carla-rpc-port=${CARLA_PORT} -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=${NVIDIA_VISIBLE_DEVICES}
+              echo "Stopped CARLA server"
+              sleep 86400
+              exit 0
+          env:
+            - name: CARLA_PORT
+              value: "3000"
+            - name: DISPLAY
+              value: ":0"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: SDL_VIDEODRIVER
+              value: "x11"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "1"
+          volumeMounts:
+            - mountPath: /tmp/.X11-unix
+              name: x11
+            - mountPath: /home/carla/CarlaUE4/Saved
+              name: logs
+              subPath: simulator
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+        - name: agent-2
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              bash /workspace/leaderboard/run_leaderboard.sh 
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner
+            - mountPath: /workspace/CARLA
+              name: carla-python-api
+            - mountPath: /tmp/agent
+              name: logs
+              subPath: agent2
+          env:
+            - name: CARLA_PORT
+              value: "3000"
+            - name: CHALLENGE_TRACK_CODENAME
+              value: "SENSORS"
+            - name: ROUTES_SUBSET
+              value: "1"
+            - name: RESUME
+              value: ""
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "1"
+
+        # Third set of simulator + agent
+        - name: simulator-3
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Starting CARLA server"
+              ./CarlaUE4.sh -vulkan -carla-rpc-port=${CARLA_PORT} -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=${NVIDIA_VISIBLE_DEVICES}
+              echo "Stopped CARLA server"
+              sleep 86400
+              exit 0
+          env:
+            - name: CARLA_PORT
+              value: "4000"
+            - name: DISPLAY
+              value: ":0"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "48"
+            - name: SDL_VIDEODRIVER
+              value: "x11"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "2"
+          volumeMounts:
+            - mountPath: /tmp/.X11-unix
+              name: x11
+            - mountPath: /home/carla/CarlaUE4/Saved
+              name: logs
+              subPath: simulator
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+        - name: agent-3
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              bash /workspace/leaderboard/run_leaderboard.sh 
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner
+            - mountPath: /workspace/CARLA
+              name: carla-python-api
+            - mountPath: /tmp/agent
+              name: logs
+              subPath: agent3
+          env:
+            - name: CARLA_PORT
+              value: "4000"
+            - name: CHALLENGE_TRACK_CODENAME
+              value: "SENSORS"
+            - name: ROUTES_SUBSET
+              value: "2"
+            - name: RESUME
+              value: ""
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "2"
+
+        # Four set of simulator + agent
+        - name: simulator-4
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Starting CARLA server"
+              ./CarlaUE4.sh -vulkan -carla-rpc-port=${CARLA_PORT} -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=${NVIDIA_VISIBLE_DEVICES}
+              echo "Stopped CARLA server"
+              sleep 86400
+              exit 0
+          env:
+            - name: CARLA_PORT
+              value: "5000"
+            - name: DISPLAY
+              value: ":0"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "48"
+            - name: SDL_VIDEODRIVER
+              value: "x11"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "3"
+          volumeMounts:
+            - mountPath: /tmp/.X11-unix
+              name: x11
+            - mountPath: /home/carla/CarlaUE4/Saved
+              name: logs
+              subPath: simulator
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+        - name: agent-4
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              bash /workspace/leaderboard/run_leaderboard.sh
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner
+            - mountPath: /workspace/CARLA
+              name: carla-python-api
+            - mountPath: /tmp/agent
+              name: logs
+              subPath: agent4
+          env:
+            - name: CARLA_PORT
+              value: "5000"
+            - name: CHALLENGE_TRACK_CODENAME
+              value: "SENSORS"
+            - name: ROUTES_SUBSET
+              value: "3"
+            - name: RESUME
+              value: ""
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "3"
+
+        # Log copy container
+        - name: logcopy
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-logcopy:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              bash /workspace/leaderboard/run_logcopy.sh
+            volumeMounts:
+            - mountPath: /logs
+              name: logs
+            - mountPath: /utils/leaderboard
+              name: leaderboard
+            - mountPath: /utils/scenario_runner
+              name: scenario-runner
+
+      restartPolicy: Never
+      volumes:
+        - name: leaderboard
+          emptyDir: {}
+        - name: scenario-runner
+          emptyDir: {}
+        - name: carla-python-api
+          emptyDir: {}
+        - name: logs
+          emptyDir: {}
+        - name: x11
+          hostPath:
+            path: /tmp/.X11-unix
+
+  backoffLimit: 0
