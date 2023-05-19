@@ -17,27 +17,27 @@ spec:
         node.kubernetes.io/instance-type: g5.12xlarge
       initContainers:
         - name: leaderboard-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
           command: [ "sh", "-c", "cp -r /workspace/leaderboard/* /tmp/leaderboard-master/"]
           volumeMounts:
             - mountPath: /tmp/leaderboard-master
               name: leaderboard-master
         - name: scenario-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
           command: [ "sh", "-c", "cp -r /workspace/scenario_runner/* /tmp/scenario-runner-master/"]
           volumeMounts:
             - mountPath: /tmp/scenario-runner-master
               name: scenario-runner-master
         - name: carla-root-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
           command: [ "sh", "-c", "cp -r /workspace/CARLA/* /tmp/carla-root-master/"]
           volumeMounts:
             - mountPath: /tmp/carla-root-master
               name: carla-root-master
       containers:
         # First set of simulator + agent
-        - name: simulator
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+        - name: simulator-1
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-development:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -69,7 +69,7 @@ spec:
               nvidia.com/gpu: 1
               #cpu: 12.0  # 1000m is equal to 1 VCPU core
               #cpu: "12000m"  # 1000m is equal to 1 VCPU core
-        - name: agent
+        - name: agent-1
           image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
           command: ["/bin/bash", "-c"]
           args:
@@ -114,7 +114,7 @@ spec:
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
-              value: "2"
+              value: "0"
             - name: OMP_NUM_THREADS
               value: "64"
             - name: HTTP_PROXY
@@ -145,13 +145,13 @@ spec:
               value: "/home/carla"
             - name: RESUME
               value: ""
-          resources:
-            limits:
-              nvidia.com/gpu: 1
+          # resources:
+          #   limits:
+          #     nvidia.com/gpu: 1
               #cpu: 12.0  # 1000m is equal to 1 VCPU core
         # Second set of simulator + agent
         - name: simulator-2
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-development:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -227,6 +227,232 @@ spec:
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
+              value: "1"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: HTTP_PROXY
+              value: ""
+            - name: HTTPS_PROXY
+              value: ""
+            - name: LEADERBOARD_ROOT
+              value: "/workspace/leaderboard"
+            - name: CARLA_ROOT
+              value: "/workspace/CARLA"
+            - name: SCENARIO_RUNNER_ROOT
+              value: "/workspace/scenario_runner"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_devtest.xml"
+            - name: ROUTES_SUBSET
+              value: "0"
+            - name: REPETITIONS
+              value: "1"
+            - name: CHALLENGE_TRACK_CODENAME
+              value: "SENSORS"
+            - name: CHECKPOINT_ENDPOINT
+              value: "/workspace/leaderboard/results.json"
+            - name: DEBUG_CHECKPOINT_ENDPOINT
+              value: "/workspace/leaderboard/live_results.txt"
+            - name: DEBUG_CHALLENGE
+              value: "0"
+            - name: RECORD_PATH
+              value: "/home/carla"
+            - name: RESUME
+              value: ""
+          # resources:
+          #   limits:
+          #     nvidia.com/gpu: 1
+              #cpu: 11  # 1000m is equal to 1 VCPU core
+        # Third set of simulator + agent
+        - name: simulator-3
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-development:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Starting CARLA server"
+              ./CarlaUE4.sh -vulkan -carla-rpc-port=4000 -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=2
+              echo "Stopped CARLA server"
+              sleep 86400
+              exit 0
+          env:
+            - name: DISPLAY
+              value: ":0"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: SDL_VIDEODRIVER
+              value: "x11"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "2"
+          volumeMounts:
+            - mountPath: /tmp/.X11-unix
+              name: x11
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+              #cpu: 12.0  # 1000m is equal to 1 VCPU core
+        - name: agent-3
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Sleeping a bit to ensure CARLA is ready"
+              sleep 30
+              echo "Starting agent"
+
+              echo "python3 ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator.py \
+              --routes=${ROUTES} \
+              --routes-subset=${ROUTES_SUBSET} \
+              --repetitions=${REPETITIONS} \
+              --track=${CHALLENGE_TRACK_CODENAME} \
+              --checkpoint=${CHECKPOINT_ENDPOINT} \
+              --debug-checkpoint=${DEBUG_CHECKPOINT_ENDPOINT} \
+              --agent=${TEAM_AGENT} \
+              --agent-config=${TEAM_CONFIG} \
+              --debug=${DEBUG_CHALLENGE} \
+              --record=${RECORD_PATH} \
+              --resume=${RESUME} \
+              --port=${CARLA_PORT}" \
+              --traffic-manager-port=${CARLA_TM_PORT} > /workspace/leaderboard/scripts/run_evaluation.sh
+
+              bash /workspace/leaderboard/scripts/run_evaluation.sh
+              echo "Finished agent"
+              sleep 86400
+              exit 0
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard-master
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner-master
+            - mountPath: /workspace/CARLA
+              name: carla-root-master
+          env:
+            - name: CARLA_PORT
+              value: "4000"
+            - name: CARLA_TM_PORT
+              value: "10000"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "2"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: HTTP_PROXY
+              value: ""
+            - name: HTTPS_PROXY
+              value: ""
+            - name: LEADERBOARD_ROOT
+              value: "/workspace/leaderboard"
+            - name: CARLA_ROOT
+              value: "/workspace/CARLA"
+            - name: SCENARIO_RUNNER_ROOT
+              value: "/workspace/scenario_runner"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_devtest.xml"
+            - name: ROUTES_SUBSET
+              value: "0"
+            - name: REPETITIONS
+              value: "1"
+            - name: CHALLENGE_TRACK_CODENAME
+              value: "SENSORS"
+            - name: CHECKPOINT_ENDPOINT
+              value: "/workspace/leaderboard/results.json"
+            - name: DEBUG_CHECKPOINT_ENDPOINT
+              value: "/workspace/leaderboard/live_results.txt"
+            - name: DEBUG_CHALLENGE
+              value: "0"
+            - name: RECORD_PATH
+              value: "/home/carla"
+            - name: RESUME
+              value: ""
+          # resources:
+          #   limits:
+          #     nvidia.com/gpu: 1
+              #cpu: 11  # 1000m is equal to 1 VCPU core
+        # Four set of simulator + agent
+        - name: simulator-4
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-development:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Starting CARLA server"
+              ./CarlaUE4.sh -vulkan -carla-rpc-port=5000 -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=3
+              echo "Stopped CARLA server"
+              sleep 86400
+              exit 0
+          env:
+            - name: DISPLAY
+              value: ":0"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: SDL_VIDEODRIVER
+              value: "x11"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "3"
+          volumeMounts:
+            - mountPath: /tmp/.X11-unix
+              name: x11
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+              #cpu: 12.0  # 1000m is equal to 1 VCPU core
+        - name: agent-4
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Sleeping a bit to ensure CARLA is ready"
+              sleep 30
+              echo "Starting agent"
+
+              echo "python3 ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator.py \
+              --routes=${ROUTES} \
+              --routes-subset=${ROUTES_SUBSET} \
+              --repetitions=${REPETITIONS} \
+              --track=${CHALLENGE_TRACK_CODENAME} \
+              --checkpoint=${CHECKPOINT_ENDPOINT} \
+              --debug-checkpoint=${DEBUG_CHECKPOINT_ENDPOINT} \
+              --agent=${TEAM_AGENT} \
+              --agent-config=${TEAM_CONFIG} \
+              --debug=${DEBUG_CHALLENGE} \
+              --record=${RECORD_PATH} \
+              --resume=${RESUME} \
+              --port=${CARLA_PORT}" \
+              --traffic-manager-port=${CARLA_TM_PORT} > /workspace/leaderboard/scripts/run_evaluation.sh
+
+              bash /workspace/leaderboard/scripts/run_evaluation.sh
+              echo "Finished agent"
+              sleep 86400
+              exit 0
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard-master
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner-master
+            - mountPath: /workspace/CARLA
+              name: carla-root-master
+          env:
+            - name: CARLA_PORT
+              value: "5000"
+            - name: CARLA_TM_PORT
+              value: "11000"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
               value: "3"
             - name: OMP_NUM_THREADS
               value: "64"
@@ -258,9 +484,9 @@ spec:
               value: "/home/carla"
             - name: RESUME
               value: ""
-          resources:
-            limits:
-              nvidia.com/gpu: 1
+          # resources:
+          #   limits:
+          #     nvidia.com/gpu: 1
               #cpu: 11  # 1000m is equal to 1 VCPU core
       restartPolicy: Never
       volumes:
