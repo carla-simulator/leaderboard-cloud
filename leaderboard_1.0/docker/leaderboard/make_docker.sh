@@ -5,7 +5,7 @@ DOC_STRING="Build leaderboard docker image."
 USAGE_STRING=$(cat <<- END
 Usage: $0 [-h|--help] [-t|--target-name TARGET]
 
-The default target name is "leaderboard-20"
+The default target name is "leaderboard-10"
 
 The following env variables are mandatory:
   * CARLA_ROOT
@@ -18,7 +18,7 @@ END
 usage() { echo "${DOC_STRING}"; echo "${USAGE_STRING}"; exit 1; }
 
 # Defaults
-TARGET_NAME="leaderboard-20"
+TARGET_NAME="leaderboard-10"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -74,15 +74,14 @@ cp -fr ${LEADERBOARD_ROOT}/ .lbtmp
 rm -fr .lbtmp/leaderboard/.git
 
 echo "Copying CARLA's private data"
-cp ${CHALLENGE_CONTENTS_ROOT}/src/leaderboard_20/data/* .lbtmp/leaderboard/data
-cp ${CHALLENGE_CONTENTS_ROOT}/src/leaderboard_20/data/parked_vehicles.py .lbtmp/leaderboard/leaderboard/utils/parked_vehicles.py
+cp ${CHALLENGE_CONTENTS_ROOT}/src/leaderboard/data/* .lbtmp/leaderboard/data
 cp ${SCRIPT_DIR}/run_leaderboard.sh .lbtmp/leaderboard/
 
 # build docker image
 echo "Building docker"
 docker build --force-rm --build-arg HTTP_PROXY=${HTTP_PROXY} \
-    --build-arg HTTPS_PROXY=${HTTPS_PROXY} \
-    --build-arg http_proxy=${http_proxy} \
-    -t ${TARGET_NAME} -f ${SCRIPT_DIR}/Dockerfile .lbtmp
+             --build-arg HTTPS_PROXY=${HTTPS_PROXY} \
+             --build-arg http_proxy=${http_proxy} \
+             -t leaderboard-master -f ${SCRIPT_DIR}/Dockerfile .lbtmp
 
 rm -fr .lbtmp

@@ -11,7 +11,7 @@ spec:
 
       initContainers:
         - name: private-contents
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-testing
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -34,33 +34,26 @@ spec:
       containers:
         # First set of simulator + agent
         - name: simulator-1
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
               echo "Starting CARLA server"
-              ./CarlaUE4.sh -vulkan -carla-rpc-port=${CARLA_PORT} -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=${NVIDIA_VISIBLE_DEVICES}
+              ./CarlaUE4.sh  -carla-rpc-port=${CARLA_PORT} -opengl -nosound
               echo "Stopped CARLA server"
-              sleep 86400
               exit 0
           env:
             - name: CARLA_PORT
               value: "2000"
-            - name: DISPLAY
-              value: ":0"
             - name: OMP_PROC_BIND
               value: "FALSE"
             - name: OMP_NUM_THREADS
-              value: "48"
+              value: "64"
             - name: SDL_VIDEODRIVER
-              value: "x11"
-            - name: NVIDIA_DRIVER_CAPABILITIES
-              value: "all"
+              value: "offscreen"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "0"
           volumeMounts:
-            - mountPath: /tmp/.X11-unix
-              name: x11
             - mountPath: /home/carla/CarlaUE4/Saved
               name: logs
               subPath: simulator
@@ -70,7 +63,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-1
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-403:efac48dd-abc1-47e2-bd3b-89c036b5faeb
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -91,7 +84,7 @@ spec:
             - name: CHALLENGE_TRACK_CODENAME
               value: "SENSORS"
             - name: ROUTES_SUBSET
-              value: "0"
+              value: "0-4"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -101,33 +94,26 @@ spec:
 
         # Second set of simulator + agent
         - name: simulator-2
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
               echo "Starting CARLA server"
-              ./CarlaUE4.sh -vulkan -carla-rpc-port=${CARLA_PORT} -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=${NVIDIA_VISIBLE_DEVICES}
+              ./CarlaUE4.sh  -carla-rpc-port=${CARLA_PORT} -opengl -nosound
               echo "Stopped CARLA server"
-              sleep 86400
               exit 0
           env:
             - name: CARLA_PORT
-              value: "3000"
-            - name: DISPLAY
-              value: ":0"
+              value: "2100"
             - name: OMP_PROC_BIND
               value: "FALSE"
             - name: OMP_NUM_THREADS
               value: "64"
             - name: SDL_VIDEODRIVER
-              value: "x11"
-            - name: NVIDIA_DRIVER_CAPABILITIES
-              value: "all"
+              value: "offscreen"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "1"
           volumeMounts:
-            - mountPath: /tmp/.X11-unix
-              name: x11
             - mountPath: /home/carla/CarlaUE4/Saved
               name: logs
               subPath: simulator
@@ -137,7 +123,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-2
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-403:efac48dd-abc1-47e2-bd3b-89c036b5faeb
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -154,11 +140,11 @@ spec:
               subPath: agent2
           env:
             - name: CARLA_PORT
-              value: "3000"
+              value: "2100"
             - name: CHALLENGE_TRACK_CODENAME
               value: "SENSORS"
             - name: ROUTES_SUBSET
-              value: "1"
+              value: "5-9"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -168,33 +154,26 @@ spec:
 
         # Third set of simulator + agent
         - name: simulator-3
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
               echo "Starting CARLA server"
-              ./CarlaUE4.sh -vulkan -carla-rpc-port=${CARLA_PORT} -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=${NVIDIA_VISIBLE_DEVICES}
+              ./CarlaUE4.sh  -carla-rpc-port=${CARLA_PORT} -opengl -nosound
               echo "Stopped CARLA server"
-              sleep 86400
               exit 0
           env:
             - name: CARLA_PORT
-              value: "4000"
-            - name: DISPLAY
-              value: ":0"
+              value: "2200"
             - name: OMP_PROC_BIND
               value: "FALSE"
             - name: OMP_NUM_THREADS
-              value: "48"
+              value: "64"
             - name: SDL_VIDEODRIVER
-              value: "x11"
-            - name: NVIDIA_DRIVER_CAPABILITIES
-              value: "all"
+              value: "offscreen"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "2"
           volumeMounts:
-            - mountPath: /tmp/.X11-unix
-              name: x11
             - mountPath: /home/carla/CarlaUE4/Saved
               name: logs
               subPath: simulator
@@ -204,7 +183,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-3
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-403:efac48dd-abc1-47e2-bd3b-89c036b5faeb
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -221,11 +200,11 @@ spec:
               subPath: agent3
           env:
             - name: CARLA_PORT
-              value: "4000"
+              value: "2200"
             - name: CHALLENGE_TRACK_CODENAME
               value: "SENSORS"
             - name: ROUTES_SUBSET
-              value: "2"
+              value: "10-14"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -235,33 +214,26 @@ spec:
 
         # Four set of simulator + agent
         - name: simulator-4
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
               echo "Starting CARLA server"
-              ./CarlaUE4.sh -vulkan -carla-rpc-port=${CARLA_PORT} -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=${NVIDIA_VISIBLE_DEVICES}
+              ./CarlaUE4.sh  -carla-rpc-port=${CARLA_PORT} -opengl -nosound
               echo "Stopped CARLA server"
-              sleep 86400
               exit 0
           env:
             - name: CARLA_PORT
-              value: "5000"
-            - name: DISPLAY
-              value: ":0"
+              value: "2300"
             - name: OMP_PROC_BIND
               value: "FALSE"
             - name: OMP_NUM_THREADS
-              value: "48"
+              value: "64"
             - name: SDL_VIDEODRIVER
-              value: "x11"
-            - name: NVIDIA_DRIVER_CAPABILITIES
-              value: "all"
+              value: "offscreen"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "3"
           volumeMounts:
-            - mountPath: /tmp/.X11-unix
-              name: x11
             - mountPath: /home/carla/CarlaUE4/Saved
               name: logs
               subPath: simulator
@@ -271,7 +243,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-4
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-403:efac48dd-abc1-47e2-bd3b-89c036b5faeb
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -288,11 +260,11 @@ spec:
               subPath: agent4
           env:
             - name: CARLA_PORT
-              value: "5000"
+              value: "2300"
             - name: CHALLENGE_TRACK_CODENAME
               value: "SENSORS"
             - name: ROUTES_SUBSET
-              value: "3"
+              value: "15-19"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -307,6 +279,9 @@ spec:
           args:
             - |
               bash /workspace/run_logcopy.sh
+          env:
+            - name: SUBMISSION_ID
+              value: leaderboard-10-test-1
           volumeMounts:
             - mountPath: /logs
               name: logs
@@ -325,8 +300,5 @@ spec:
           emptyDir: {}
         - name: logs
           emptyDir: {}
-        - name: x11
-          hostPath:
-            path: /tmp/.X11-unix
 
   backoffLimit: 0
