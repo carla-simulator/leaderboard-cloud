@@ -72,8 +72,5 @@ done
 sleep 5
 kill_cleanup
 
-echo "Creating the .done file"
-touch /tmp/agent_log/.done 
-
 echo "Finished agent"
 exit 0
