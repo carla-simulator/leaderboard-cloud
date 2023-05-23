@@ -1,8 +1,5 @@
-_NOTE: These docs assume that you are using Linux and that all commands are run on this repositories's base path
+Welcome to the *leaderboard-cloud* repository. Here, users can find all the resources, steps and information about the infraestructure used by the CARLA Leaderboard's cloud. The aim is to have a clear open source, easy to understand pipeline that can be used to deploy either future versions of the official CARLA Leaderboard, or possible variations done by the users. It is not expected for users to have a deep understanding of anything cloud related.
 
-1. [Install prerequisites](docs/1_prerequisites.md)
-1. [Creation of the base AMI](docs/2_creation_of_the_base_ami.md)
-1. [Creation of the cluster](docs/3_creation_of_the_cluster.md)
-1. [Adding logging to Cloudwatch](docs/4_logging_results_to_cloudwatch.md)
-1. [Granting other users access to the cluster](docs/5_granting_cluster_access.md)
-1. [Useful Commands](docs/x_useful_commands.md)
+This repository is divided into two main folders, one for each of the official versions of the CARLA Leaderboard. With that said, most of the information is very similar between the two versions, being the main difference the kubernetes Job that starts both the CARLA server and the Leaderboard.
+
+Now then, choose a folder and start the adventure! But beware, the further you go in, the harder it is to get out.
