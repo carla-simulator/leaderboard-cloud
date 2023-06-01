@@ -3,11 +3,10 @@
 #
 # sudo -E docker run --rm --gpus all -it --net=host carla:latest /bin/bash
 
-########################################################
-# BIG TODO: this is the 0.9.10.1 base, check that this works
-########################################################3
-
 FROM nvidia/vulkan:1.1.121-cuda-10.1--ubuntu18.04
+
+RUN rm /etc/apt/sources.list.d/cuda.list
+RUN rm /etc/apt/sources.list.d/nvidia-ml.list
 
 RUN packages='libsdl2-2.0 xserver-xorg libvulkan1' \
 	&& apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y $packages --no-install-recommends \
@@ -23,10 +22,10 @@ RUN packages='libsdl2-2.0 xserver-xorg libvulkan1' \
 	}" > /etc/vulkan/icd.d/nvidia_icd.json \
 	&& rm -rf /var/lib/apt/lists/*
 
-
 RUN useradd -m carla
 
 COPY --chown=carla:carla . /home/carla
+COPY run_carla.sh /home/carla/run_carla.sh
 
 USER carla
 WORKDIR /home/carla

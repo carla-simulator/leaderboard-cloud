@@ -82,6 +82,6 @@ echo "Building docker"
 docker build --force-rm --build-arg HTTP_PROXY=${HTTP_PROXY} \
              --build-arg HTTPS_PROXY=${HTTPS_PROXY} \
              --build-arg http_proxy=${http_proxy} \
-             -t leaderboard-master -f ${SCRIPT_DIR}/Dockerfile .lbtmp
+             -t ${TARGET_NAME} -f ${SCRIPT_DIR}/Dockerfile .lbtmp
 
 rm -fr .lbtmp

@@ -52,8 +52,8 @@ iam:
         - "s3-object-lambda:*"
         Resource:
         #- "arn:aws:s3:::"arn:aws:s3:::carla-leaderboard-20-logs"
-        - "arn:aws:s3:::beta-leaderboard-20"
-        - "arn:aws:s3:::beta-leaderboard-20/*"
+        - "arn:aws:s3:::beta-leaderboard-10"
+        - "arn:aws:s3:::beta-leaderboard-10/*"
         - "arn:aws:ecr:*:342236305043:repository/*"
 
 nodeGroups:

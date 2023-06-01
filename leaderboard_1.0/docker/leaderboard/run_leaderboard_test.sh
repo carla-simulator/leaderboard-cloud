@@ -28,9 +28,9 @@ export CARLA_TM_PORT=$(($CARLA_PORT + 10))
 
 [[ -z "${CHALLENGE_TRACK_CODENAME}" ]] && export CHALLENGE_TRACK_CODENAME="SENSORS"
 
-export ROUTES="/workspace/leaderboard/data/routes_testing.xml"
+export ROUTES="/workspace/leaderboard/data/single_route_test.xml"
 export SCENARIOS="/workspace/leaderboard/data/all_towns_traffic_scenarios_public.json"
-export REPETITIONS="5"
+export REPETITIONS="1"
 export RESUME=""
 
 export CHECKPOINT_ENDPOINT="$AGENT_RESULTS"
