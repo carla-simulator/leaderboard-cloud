@@ -27,7 +27,7 @@ while sleep ${LOGS_PERIOD} ; do
 
   echo "Pushing to evalai" # TODO
 
-  DONE_FILES=$(find /logs/container-status -name *.done* | wc -l)
+  DONE_FILES=$(find /logs/containers-status -name *.done* | wc -l)
   echo "Number of finished containers: $DONE_FILES"
   if [ $DONE_FILES -ge 8 ]; then
     echo "Detected that all containers have finished. Stopping..."

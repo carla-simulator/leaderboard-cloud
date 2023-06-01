@@ -139,4 +139,4 @@ else
 fi
 
 # To test the resume functionality, you can use this random number generation
-# if [ $[ $RANDOM % 100] -gt 50 ]; then       
+# if [ $[ $RANDOM % 100] -gt 50 ]; then
