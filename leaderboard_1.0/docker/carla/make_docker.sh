@@ -38,6 +38,7 @@ then
     exit 1
 fi
 
+# Temporary copying run_carla script in ${CARLA_ROOT}
 cp ${SCRIPT_DIR}/run_carla.sh ${CARLA_ROOT}
 
 # Build docker image
@@ -46,4 +47,4 @@ docker build --force-rm \
     -t ${TARGET_NAME} \
     -f ${SCRIPT_DIR}/Dockerfile ${CARLA_ROOT}
 
-rm -fr ${CARLA_ROOT}/run_carla.sh 
+rm -fr ${CARLA_ROOT}/run_carla.sh

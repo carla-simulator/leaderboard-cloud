@@ -23,7 +23,7 @@ while sleep ${LOGS_PERIOD} ; do
     --endpoint /logs/agent_results.json
 
   echo "Pushing to S3"
-  aws s3 sync /logs s3://beta-leaderboard-10/${SUBMISSION_ID}
+  aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
 
   echo "Pushing to evalai" # TODO
 
@@ -32,7 +32,7 @@ while sleep ${LOGS_PERIOD} ; do
   if [ $DONE_FILES -ge 8 ]; then
     echo "Detected that all containers have finished. Stopping..."
     touch $LOGCOPY_DONE_FILE
-    aws s3 sync /logs s3://beta-leaderboard-10/${SUBMISSION_ID}
+    aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
     break
   fi
 

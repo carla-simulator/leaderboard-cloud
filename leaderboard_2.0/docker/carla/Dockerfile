@@ -1,8 +1,4 @@
 
-# run the docker container as:
-#
-# sudo -E docker run --rm --gpus all -it --net=host carla:latest /bin/bash
-
 FROM nvidia/vulkan:1.2.170-470
 
 RUN apt-key adv --fetch-keys "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub"
@@ -16,6 +12,9 @@ COPY --chown=carla:carla . /home/carla
 USER carla
 WORKDIR /home/carla
 
-# you can also run CARLA in offscreen mode with -RenderOffScreen
-# CMD /bin/bash CarlaUE4.sh -RenderOffScreen
-CMD /bin/bash CarlaUE4.sh
+ENV OMP_PROC_BIND="FALSE"
+ENV OMP_NUM_THREADS="48"
+ENV SDL_VIDEODRIVER="x11"
+ENV NVIDIA_DRIVER_CAPABILITIES="all"
+
+CMD /bin/bash CarlaUE4.sh -RenderOffScreen -nosound

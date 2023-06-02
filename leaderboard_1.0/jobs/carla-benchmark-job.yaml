@@ -43,12 +43,6 @@ spec:
           env:
             - name: CARLA_PORT
               value: "2000"
-            - name: OMP_PROC_BIND
-              value: "FALSE"
-            - name: OMP_NUM_THREADS
-              value: "64"
-            - name: SDL_VIDEODRIVER
-              value: "offscreen"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "0"
           volumeMounts:
@@ -69,19 +63,6 @@ spec:
           args:
             - |
               bash /workspace/leaderboard/run_leaderboard.sh
-          volumeMounts:
-            - mountPath: /workspace/leaderboard
-              name: leaderboard
-            - mountPath: /workspace/scenario_runner
-              name: scenario-runner
-            - mountPath: /workspace/CARLA
-              name: carla-python-api
-            - mountPath: /tmp/agent
-              name: logs
-              subPath: agent1
-            - mountPath: /tmp/status
-              name: logs
-              subPath: containers-status
           env:
             - name: CARLA_PORT
               value: "2000"
@@ -95,6 +76,19 @@ spec:
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "0"
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner
+            - mountPath: /workspace/CARLA
+              name: carla-python-api
+            - mountPath: /tmp/agent
+              name: logs
+              subPath: agent1
+            - mountPath: /tmp/status
+              name: logs
+              subPath: containers-status
 
         # Second set of simulator + agent
         - name: simulator-2
@@ -106,12 +100,6 @@ spec:
           env:
             - name: CARLA_PORT
               value: "2100"
-            - name: OMP_PROC_BIND
-              value: "FALSE"
-            - name: OMP_NUM_THREADS
-              value: "64"
-            - name: SDL_VIDEODRIVER
-              value: "offscreen"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "1"
           volumeMounts:
@@ -132,19 +120,6 @@ spec:
           args:
             - |
               bash /workspace/leaderboard/run_leaderboard.sh
-          volumeMounts:
-            - mountPath: /workspace/leaderboard
-              name: leaderboard
-            - mountPath: /workspace/scenario_runner
-              name: scenario-runner
-            - mountPath: /workspace/CARLA
-              name: carla-python-api
-            - mountPath: /tmp/agent
-              name: logs
-              subPath: agent2
-            - mountPath: /tmp/status
-              name: logs
-              subPath: containers-status
           env:
             - name: CARLA_PORT
               value: "2100"
@@ -158,6 +133,19 @@ spec:
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "1"
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner
+            - mountPath: /workspace/CARLA
+              name: carla-python-api
+            - mountPath: /tmp/agent
+              name: logs
+              subPath: agent2
+            - mountPath: /tmp/status
+              name: logs
+              subPath: containers-status
 
         # Third set of simulator + agent
         - name: simulator-3
@@ -169,12 +157,6 @@ spec:
           env:
             - name: CARLA_PORT
               value: "2200"
-            - name: OMP_PROC_BIND
-              value: "FALSE"
-            - name: OMP_NUM_THREADS
-              value: "64"
-            - name: SDL_VIDEODRIVER
-              value: "offscreen"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "2"
           volumeMounts:
@@ -195,19 +177,6 @@ spec:
           args:
             - |
               bash /workspace/leaderboard/run_leaderboard.sh
-          volumeMounts:
-            - mountPath: /workspace/leaderboard
-              name: leaderboard
-            - mountPath: /workspace/scenario_runner
-              name: scenario-runner
-            - mountPath: /workspace/CARLA
-              name: carla-python-api
-            - mountPath: /tmp/agent
-              name: logs
-              subPath: agent3
-            - mountPath: /tmp/status
-              name: logs
-              subPath: containers-status
           env:
             - name: CARLA_PORT
               value: "2200"
@@ -221,6 +190,19 @@ spec:
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "2"
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner
+            - mountPath: /workspace/CARLA
+              name: carla-python-api
+            - mountPath: /tmp/agent
+              name: logs
+              subPath: agent3
+            - mountPath: /tmp/status
+              name: logs
+              subPath: containers-status
 
         # Four set of simulator + agent
         - name: simulator-4
@@ -232,12 +214,6 @@ spec:
           env:
             - name: CARLA_PORT
               value: "2300"
-            - name: OMP_PROC_BIND
-              value: "FALSE"
-            - name: OMP_NUM_THREADS
-              value: "64"
-            - name: SDL_VIDEODRIVER
-              value: "offscreen"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "3"
           volumeMounts:
@@ -258,19 +234,6 @@ spec:
           args:
             - |
               bash /workspace/leaderboard/run_leaderboard.sh
-          volumeMounts:
-            - mountPath: /workspace/leaderboard
-              name: leaderboard
-            - mountPath: /workspace/scenario_runner
-              name: scenario-runner
-            - mountPath: /workspace/CARLA
-              name: carla-python-api
-            - mountPath: /tmp/agent
-              name: logs
-              subPath: agent4
-            - mountPath: /tmp/status
-              name: logs
-              subPath: containers-status
           env:
             - name: CARLA_PORT
               value: "2300"
@@ -284,6 +247,19 @@ spec:
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "3"
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner
+            - mountPath: /workspace/CARLA
+              name: carla-python-api
+            - mountPath: /tmp/agent
+              name: logs
+              subPath: agent4
+            - mountPath: /tmp/status
+              name: logs
+              subPath: containers-status
 
         # Log copy container
         - name: logcopy
@@ -293,6 +269,8 @@ spec:
             - |
               bash /workspace/run_logcopy.sh
           env:
+            - name: S3_BUCKET
+              value: "beta-leaderboard-10"
             - name: SUBMISSION_ID
               value: leaderboard-10-submission-id
           volumeMounts:

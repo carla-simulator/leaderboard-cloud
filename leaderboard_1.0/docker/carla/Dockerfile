@@ -1,12 +1,7 @@
 
-# run the docker container as:
-#
-# sudo -E docker run --rm --gpus all -it --net=host carla:latest /bin/bash
-
 FROM nvidia/vulkan:1.1.121-cuda-10.1--ubuntu18.04
 
-RUN rm /etc/apt/sources.list.d/cuda.list
-RUN rm /etc/apt/sources.list.d/nvidia-ml.list
+RUN apt-key adv --fetch-keys "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub"
 
 RUN packages='libsdl2-2.0 xserver-xorg libvulkan1' \
 	&& apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y $packages --no-install-recommends \
@@ -25,14 +20,13 @@ RUN packages='libsdl2-2.0 xserver-xorg libvulkan1' \
 RUN useradd -m carla
 
 COPY --chown=carla:carla . /home/carla
-COPY run_carla.sh /home/carla/run_carla.sh
 
 USER carla
 WORKDIR /home/carla
 
-# Select the video driver between offsreen and x11
-# x11 is recommended for vulkan support
-ENV SDL_VIDEODRIVER=x11
+ENV OMP_PROC_BIND="FALSE"
+ENV OMP_NUM_THREADS="48"
+ENV SDL_VIDEODRIVER="offscreen"
+ENV NVIDIA_DRIVER_CAPABILITIES="all"
 
-# you can also run CARLA in -opengl mode
-CMD /bin/bash CarlaUE4.sh -vulkan
+CMD /bin/bash CarlaUE4.sh -opengl -nosound
