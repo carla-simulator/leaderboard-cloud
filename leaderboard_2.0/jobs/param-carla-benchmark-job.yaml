@@ -62,7 +62,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-1
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image.$: $.submitted_image_uri
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -71,7 +71,7 @@ spec:
             - name: CARLA_PORT
               value: "2000"
             - name: CHALLENGE_TRACK_CODENAME
-              value: "SENSORS"
+              value.$: $.track_codename
             - name: ROUTES_SUBSET
               value: "0-4"
             - name: ROUTES
@@ -79,7 +79,7 @@ spec:
             - name: REPETITIONS
               value: "1"
             - name: RESUME
-              value: ""
+              value.$: $.resume
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
@@ -127,7 +127,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-2
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image.$: $.submitted_image_uri
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -136,7 +136,7 @@ spec:
             - name: CARLA_PORT
               value: "2100"
             - name: CHALLENGE_TRACK_CODENAME
-              value: "SENSORS"
+              value.$: $.track_codename
             - name: ROUTES_SUBSET
               value: "5-9"
             - name: ROUTES
@@ -144,7 +144,7 @@ spec:
             - name: REPETITIONS
               value: "1"
             - name: RESUME
-              value: ""
+              value.$: $.resume
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
@@ -192,7 +192,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-3
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image.$: $.submitted_image_uri
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -201,7 +201,7 @@ spec:
             - name: CARLA_PORT
               value: "2200"
             - name: CHALLENGE_TRACK_CODENAME
-              value: "SENSORS"
+              value.$: $.track_codename
             - name: ROUTES_SUBSET
               value: "10-14"
             - name: ROUTES
@@ -209,7 +209,7 @@ spec:
             - name: REPETITIONS
               value: "1"
             - name: RESUME
-              value: ""
+              value.$: $.resume
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
@@ -257,7 +257,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-4
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image.$: $.submitted_image_uri
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -266,7 +266,7 @@ spec:
             - name: CARLA_PORT
               value: "2300"
             - name: CHALLENGE_TRACK_CODENAME
-              value: "SENSORS"
+              value.$: $.track_codename
             - name: ROUTES_SUBSET
               value: "15-19"
             - name: ROUTES
@@ -274,7 +274,7 @@ spec:
             - name: REPETITIONS
               value: "1"
             - name: RESUME
-              value: ""
+              value.$: $.resume
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
@@ -304,7 +304,7 @@ spec:
             - name: S3_BUCKET
               value: "beta-leaderboard-20"
             - name: SUBMISSION_ID
-              value: "0"
+              value.$: $.submission_id
           volumeMounts:
             - mountPath: /logs
               name: logs

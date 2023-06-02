@@ -11,7 +11,7 @@ spec:
 
       initContainers:
         - name: private-contents
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-testing
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -35,7 +35,7 @@ spec:
       containers:
         # First set of simulator + agent
         - name: simulator-1
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -43,13 +43,9 @@ spec:
           env:
             - name: CARLA_PORT
               value: "2000"
-            - name: DISPLAY
-              value: ":0"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "0"
           volumeMounts:
-            - mountPath: /tmp/.X11-unix
-              name: x11
             - mountPath: /home/carla/CarlaUE4/Saved
               name: logs
               subPath: simulator
@@ -62,7 +58,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-1
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image.$: $.submitted_image_uri
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -71,15 +67,17 @@ spec:
             - name: CARLA_PORT
               value: "2000"
             - name: CHALLENGE_TRACK_CODENAME
-              value: "SENSORS"
+              value.$: $.track_codename
             - name: ROUTES_SUBSET
               value: "0-4"
             - name: ROUTES
               value: "/workspace/leaderboard/data/routes_testing.xml"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
             - name: REPETITIONS
-              value: "1"
+              value: "5"
             - name: RESUME
-              value: ""
+              value.$: $.resume
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
@@ -100,7 +98,7 @@ spec:
 
         # Second set of simulator + agent
         - name: simulator-2
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -108,13 +106,9 @@ spec:
           env:
             - name: CARLA_PORT
               value: "2100"
-            - name: DISPLAY
-              value: ":0"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "1"
           volumeMounts:
-            - mountPath: /tmp/.X11-unix
-              name: x11
             - mountPath: /home/carla/CarlaUE4/Saved
               name: logs
               subPath: simulator
@@ -127,24 +121,26 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-2
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image.$: $.submitted_image_uri
           command: ["/bin/bash", "-c"]
           args:
             - |
-              bash /workspace/leaderboard/run_leaderboard.sh 
+              bash /workspace/leaderboard/run_leaderboard.sh
           env:
             - name: CARLA_PORT
               value: "2100"
             - name: CHALLENGE_TRACK_CODENAME
-              value: "SENSORS"
+              value.$: $.track_codename
             - name: ROUTES_SUBSET
               value: "5-9"
             - name: ROUTES
               value: "/workspace/leaderboard/data/routes_testing.xml"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
             - name: REPETITIONS
-              value: "1"
+              value: "5"
             - name: RESUME
-              value: ""
+              value.$: $.resume
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
@@ -165,7 +161,7 @@ spec:
 
         # Third set of simulator + agent
         - name: simulator-3
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -173,13 +169,9 @@ spec:
           env:
             - name: CARLA_PORT
               value: "2200"
-            - name: DISPLAY
-              value: ":0"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "2"
           volumeMounts:
-            - mountPath: /tmp/.X11-unix
-              name: x11
             - mountPath: /home/carla/CarlaUE4/Saved
               name: logs
               subPath: simulator
@@ -192,24 +184,26 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-3
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image.$: $.submitted_image_uri
           command: ["/bin/bash", "-c"]
           args:
             - |
-              bash /workspace/leaderboard/run_leaderboard.sh 
+              bash /workspace/leaderboard/run_leaderboard.sh
           env:
             - name: CARLA_PORT
               value: "2200"
             - name: CHALLENGE_TRACK_CODENAME
-              value: "SENSORS"
+              value.$: $.track_codename
             - name: ROUTES_SUBSET
               value: "10-14"
             - name: ROUTES
               value: "/workspace/leaderboard/data/routes_testing.xml"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
             - name: REPETITIONS
-              value: "1"
+              value: "5"
             - name: RESUME
-              value: ""
+              value.$: $.resume
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
@@ -230,7 +224,7 @@ spec:
 
         # Four set of simulator + agent
         - name: simulator-4
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -238,13 +232,9 @@ spec:
           env:
             - name: CARLA_PORT
               value: "2300"
-            - name: DISPLAY
-              value: ":0"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "3"
           volumeMounts:
-            - mountPath: /tmp/.X11-unix
-              name: x11
             - mountPath: /home/carla/CarlaUE4/Saved
               name: logs
               subPath: simulator
@@ -257,7 +247,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-4
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image.$: $.submitted_image_uri
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -266,15 +256,17 @@ spec:
             - name: CARLA_PORT
               value: "2300"
             - name: CHALLENGE_TRACK_CODENAME
-              value: "SENSORS"
+              value.$: $.track_codename
             - name: ROUTES_SUBSET
               value: "15-19"
             - name: ROUTES
               value: "/workspace/leaderboard/data/routes_testing.xml"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
             - name: REPETITIONS
-              value: "1"
+              value: "5"
             - name: RESUME
-              value: ""
+              value.$: $.resume
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
@@ -295,16 +287,16 @@ spec:
 
         # Log copy container
         - name: logcopy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-logcopy:latest
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-10-logcopy:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
               bash /workspace/run_logcopy.sh
           env:
             - name: S3_BUCKET
-              value: "beta-leaderboard-20"
+              value: "beta-leaderboard-10"
             - name: SUBMISSION_ID
-              value: "0"
+              value.$: $.submission_id
           volumeMounts:
             - mountPath: /logs
               name: logs
@@ -323,8 +315,5 @@ spec:
           emptyDir: {}
         - name: logs
           emptyDir: {}
-        - name: x11
-          hostPath:
-            path: /tmp/.X11-unix
 
   backoffLimit: 8
