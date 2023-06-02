@@ -68,7 +68,7 @@ spec:
           command: ["/bin/bash", "-c"]
           args:
             - |
-              bash /workspace/leaderboard/run_leaderboard_test.sh
+              bash /workspace/leaderboard/run_leaderboard.sh
           volumeMounts:
             - mountPath: /workspace/leaderboard
               name: leaderboard
@@ -89,6 +89,12 @@ spec:
               value: "SENSORS"
             - name: ROUTES_SUBSET
               value: "0"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/single_route_test.xml"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_public.json"
+            - name: REPETITIONS
+              value: "1"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -131,7 +137,7 @@ spec:
           command: ["/bin/bash", "-c"]
           args:
             - |
-              bash /workspace/leaderboard/run_leaderboard_test.sh
+              bash /workspace/leaderboard/run_leaderboard.sh
           volumeMounts:
             - mountPath: /workspace/leaderboard
               name: leaderboard
@@ -152,6 +158,12 @@ spec:
               value: "SENSORS"
             - name: ROUTES_SUBSET
               value: "0"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/single_route_test.xml"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_public.json"
+            - name: REPETITIONS
+              value: "1"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -194,7 +206,7 @@ spec:
           command: ["/bin/bash", "-c"]
           args:
             - |
-              bash /workspace/leaderboard/run_leaderboard_test.sh
+              bash /workspace/leaderboard/run_leaderboard.sh
           volumeMounts:
             - mountPath: /workspace/leaderboard
               name: leaderboard
@@ -215,6 +227,12 @@ spec:
               value: "SENSORS"
             - name: ROUTES_SUBSET
               value: "0"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/single_route_test.xml"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_public.json"
+            - name: REPETITIONS
+              value: "1"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -257,7 +275,7 @@ spec:
           command: ["/bin/bash", "-c"]
           args: 
             - |
-              bash /workspace/leaderboard/run_leaderboard_test.sh
+              bash /workspace/leaderboard/run_leaderboard.sh
           volumeMounts:
             - mountPath: /workspace/leaderboard
               name: leaderboard
@@ -278,6 +296,12 @@ spec:
               value: "SENSORS"
             - name: ROUTES_SUBSET
               value: "0"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/single_route_test.xml"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_public.json"
+            - name: REPETITIONS
+              value: "1"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES

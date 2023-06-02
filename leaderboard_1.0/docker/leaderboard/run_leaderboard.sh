@@ -23,19 +23,17 @@ export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/:${SCENARIO_RUNNER_ROOT}":"${LE
 ############################
 ## LEADERBOARD PARAMETERS ##
 ############################
-[[ -z "${CARLA_PORT}" ]]           && export CARLA_PORT="2000"
+[[ -z "${CARLA_PORT}" ]]                && export CARLA_PORT="2000"
 export CARLA_TM_PORT=$(($CARLA_PORT + 10))
 
-[[ -z "${CHALLENGE_TRACK_CODENAME}" ]] && export CHALLENGE_TRACK_CODENAME="SENSORS"
-
-export ROUTES="/workspace/leaderboard/data/routes_testing.xml"
-export SCENARIOS="/workspace/leaderboard/data/all_towns_traffic_scenarios_public.json"
-export REPETITIONS="5"
-export RESUME=""
+[[ -z "${CHALLENGE_TRACK_CODENAME}" ]]  && export CHALLENGE_TRACK_CODENAME="SENSORS"
+[[ -z "${ROUTES}" ]]                    && export ROUTES="/workspace/leaderboard/data/routes_testing.xml"
+[[ -z "${SCENARIOS}" ]]                 && export SCENARIOS="/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
+[[ -z "${REPETITIONS}" ]]               && export REPETITIONS="5"
+[[ -z "${RESUME}" ]]                    && export RESUME=""
 
 export CHECKPOINT_ENDPOINT="$AGENT_RESULTS"
 export RECORD_PATH="/home/carla/CarlaUE4/Saved"
-
 export DEBUG_CHALLENGE="0"
 
 ############################

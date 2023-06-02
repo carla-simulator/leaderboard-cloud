@@ -76,7 +76,6 @@ rm -fr .lbtmp/leaderboard/.git
 echo "Copying CARLA's private data"
 cp ${CHALLENGE_CONTENTS_ROOT}/src/leaderboard/data/* .lbtmp/leaderboard/data
 cp ${SCRIPT_DIR}/run_leaderboard.sh .lbtmp/leaderboard/
-cp ${SCRIPT_DIR}/run_leaderboard_test.sh .lbtmp/leaderboard/
 
 # build docker image
 echo "Building docker"

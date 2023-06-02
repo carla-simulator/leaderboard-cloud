@@ -73,7 +73,11 @@ spec:
             - name: CHALLENGE_TRACK_CODENAME
               value: "SENSORS"
             - name: ROUTES_SUBSET
-              value: "0"
+              value: "0-4"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_testing.xml"
+            - name: REPETITIONS
+              value: "1"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -134,6 +138,10 @@ spec:
             - name: CHALLENGE_TRACK_CODENAME
               value: "SENSORS"
             - name: ROUTES_SUBSET
+              value: "5-9"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_testing.xml"
+            - name: REPETITIONS
               value: "1"
             - name: RESUME
               value: ""
@@ -195,7 +203,11 @@ spec:
             - name: CHALLENGE_TRACK_CODENAME
               value: "SENSORS"
             - name: ROUTES_SUBSET
-              value: "2"
+              value: "10-14"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_testing.xml"
+            - name: REPETITIONS
+              value: "1"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -256,7 +268,11 @@ spec:
             - name: CHALLENGE_TRACK_CODENAME
               value: "SENSORS"
             - name: ROUTES_SUBSET
-              value: "3"
+              value: "15-19"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_testing.xml"
+            - name: REPETITIONS
+              value: "1"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES

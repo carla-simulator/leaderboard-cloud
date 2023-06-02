@@ -70,6 +70,12 @@ spec:
               value: "SENSORS"
             - name: ROUTES_SUBSET
               value: "0-4"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_testing.xml"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
+            - name: REPETITIONS
+              value: "5"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -127,6 +133,12 @@ spec:
               value: "SENSORS"
             - name: ROUTES_SUBSET
               value: "5-9"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_testing.xml"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
+            - name: REPETITIONS
+              value: "5"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -184,6 +196,12 @@ spec:
               value: "SENSORS"
             - name: ROUTES_SUBSET
               value: "10-14"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_testing.xml"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
+            - name: REPETITIONS
+              value: "5"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -241,6 +259,12 @@ spec:
               value: "SENSORS"
             - name: ROUTES_SUBSET
               value: "15-19"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_testing.xml"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
+            - name: REPETITIONS
+              value: "5"
             - name: RESUME
               value: ""
             - name: NVIDIA_DRIVER_CAPABILITIES
