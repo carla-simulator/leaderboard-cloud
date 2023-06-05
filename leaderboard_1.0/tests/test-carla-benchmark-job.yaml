@@ -90,7 +90,7 @@ spec:
             - name: ROUTES_SUBSET
               value: "0"
             - name: ROUTES
-              value: "/workspace/leaderboard/data/rotues_tesleaderboard_debug.xml"
+              value: "/workspace/leaderboard/data/routes_testleaderboard_debug.xml"
             - name: SCENARIOS
               value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
             - name: REPETITIONS
@@ -159,7 +159,7 @@ spec:
             - name: ROUTES_SUBSET
               value: "0"
             - name: ROUTES
-              value: "/workspace/leaderboard/data/rotues_tesleaderboard_debug.xml"
+              value: "/workspace/leaderboard/data/routes_testleaderboard_debug.xml"
             - name: SCENARIOS
               value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
             - name: REPETITIONS
@@ -228,7 +228,7 @@ spec:
             - name: ROUTES_SUBSET
               value: "0"
             - name: ROUTES
-              value: "/workspace/leaderboard/data/rotues_tesleaderboard_debug.xml"
+              value: "/workspace/leaderboard/data/routes_testleaderboard_debug.xml"
             - name: SCENARIOS
               value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
             - name: REPETITIONS
@@ -297,7 +297,7 @@ spec:
             - name: ROUTES_SUBSET
               value: "0"
             - name: ROUTES
-              value: "/workspace/leaderboard/data/rotues_tesleaderboard_debug.xml"
+              value: "/workspace/leaderboard/data/routes_testleaderboard_debug.xml"
             - name: SCENARIOS
               value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
             - name: REPETITIONS
@@ -317,6 +317,8 @@ spec:
             - |
               bash /workspace/run_logcopy.sh
           env:
+            - name: S3_BUCKET
+              value: "beta-leaderboard-10"
             - name: SUBMISSION_ID
               value: test-carla-benchmark-job
           volumeMounts:

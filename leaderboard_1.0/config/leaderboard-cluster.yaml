@@ -41,20 +41,19 @@ iam:
       Statement:
       - Effect: Allow
         Action:
-        # AWSAppRunnerServicePolicyForECRAccess
+        # Based on AWSAppRunnerServicePolicyForECRAccess, grants acces to download the ECR docker images
         - "ecr:GetDownloadUrlForLayer"
         - "ecr:BatchGetImage"
         - "ecr:DescribeImages"
         - "ecr:GetAuthorizationToken"
         - "ecr:BatchCheckLayerAvailability"
-        # AWSS3FullAccess
+        # Based on AWSS3FullAccess, grant read + write access to S3“
         - "s3:*"
         - "s3-object-lambda:*"
         Resource:
-        #- "arn:aws:s3:::"arn:aws:s3:::carla-leaderboard-20-logs"
-        - "arn:aws:s3:::beta-leaderboard-10"
-        - "arn:aws:s3:::beta-leaderboard-10/*"
+        # All ECR repositories and a specific S3 bucket
         - "arn:aws:ecr:*:342236305043:repository/*"
+        - "arn:aws:s3:::beta-leaderboard-10*"
 
 nodeGroups:
   - name: basic-worker
