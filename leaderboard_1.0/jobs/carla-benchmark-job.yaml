@@ -3,6 +3,8 @@ kind: Job
 metadata:
   name: submission-parallel
 spec:
+  backoffLimit: 8
+  ttlSecondsAfterFinished: 10
   template:
     spec:
       serviceAccountName: submission-worker
@@ -315,5 +317,3 @@ spec:
           emptyDir: {}
         - name: logs
           emptyDir: {}
-
-  backoffLimit: 8
