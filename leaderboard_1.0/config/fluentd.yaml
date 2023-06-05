@@ -104,7 +104,7 @@ spec:
           - name: AWS_REGION
             value: us-west-2
           - name: LOG_GROUP_NAME
-            value: leaderboard-20-tests
+            value: leaderboard-10-tests
         resources:
           limits:
             memory: 200Mi
