@@ -3,6 +3,8 @@ kind: Job
 metadata:
   name: submission-parallel
 spec:
+  backoffLimit: 8
+  ttlSecondsAfterFinished: 10
   template:
     spec:
       serviceAccountName: submission-worker
@@ -326,5 +328,3 @@ spec:
         - name: x11
           hostPath:
             path: /tmp/.X11-unix
-
-  backoffLimit: 8
