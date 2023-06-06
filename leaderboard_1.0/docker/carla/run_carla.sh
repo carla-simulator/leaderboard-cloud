@@ -7,10 +7,15 @@ AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$CRASH_ID"
 AGENT_DONE_FILE="/tmp/status/agent-$ID.done"
 SIMULATOR_CRASH_FILE="/tmp/status/simulator-$ID.crash$CRASH_ID"
 SIMULATOR_DONE_FILE="/tmp/status/simulator-$ID.done"
+SIMULATION_CANCEL_FILE="/tmp/status/simulation.cancel"
 
 # Ending function before exitting the container
-kill_and_wait_for_agent () {
+kill_all_processes() {
     pkill -9 'CarlaUE4'
+}
+
+kill_and_wait_for_agent () {
+    kill_all_processes
 
     if [ "$1" = "crash" ]; then
         echo "Creating the simulator crash file"
@@ -56,5 +61,11 @@ while sleep 5 ; do
         echo "Detected that the server has crashed"
         kill_and_wait_for_agent crash
         exit 1
+    fi
+    if [ -f $SIMULATION_CANCEL_FILE ]; then
+        echo ""
+        echo "Detected that the submission has been cancelled. Stopping..."
+        kill_all_processes
+        exit 0
     fi
 done

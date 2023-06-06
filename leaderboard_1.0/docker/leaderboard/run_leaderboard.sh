@@ -7,6 +7,7 @@ AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$CRASH_ID"
 AGENT_DONE_FILE="/tmp/status/agent-$ID.done"
 SIMULATOR_CRASH_FILE="/tmp/status/simulator-$ID.crash$CRASH_ID"
 SIMULATOR_DONE_FILE="/tmp/status/simulator-$ID.done"
+SIMULATION_CANCEL_FILE="/tmp/status/simulation.cancel"
 
 LEADERBOARD_LOGS=/tmp/agent/leaderboard.log
 AGENT_RESULTS=/tmp/agent/agent_results.json
@@ -56,9 +57,14 @@ file_age () {
     echo "$(($(date +%s) - $(stat -c %Y "$1" )))"
 }
 
+# Stop all processes
+kill_all_processes() {
+    pkill -9 'python|java|ros|publisher|catkin'
+}
+
 # Ending function before exitting the container
 kill_and_wait_for_simulator () {
-    pkill -9 'python|java|ros|publisher|catkin'
+    kill_all_processes
 
     if [ "$1" = "crash" ]; then
         echo "Creating the agent crash file"
@@ -120,6 +126,12 @@ while sleep 5 ; do
         echo "Detected that the simulator has crashed. Stopping..."
         break
     fi
+    if [ -f $SIMULATION_CANCEL_FILE ]; then
+        echo ""
+        echo "Detected that the submission has been cancelled. Stopping..."
+        kill_all_processes
+        exit 0
+    fi
 done
 
 sleep 5
@@ -137,4 +149,4 @@ else
 fi
 
 # To test the resume functionality, you can use this random number generation
-# if [ $[ $RANDOM % 100] -gt 50 ]; then       
+# if [ $[ $RANDOM % 100] -gt 50 ]; then

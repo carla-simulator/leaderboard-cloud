@@ -298,7 +298,7 @@ spec:
             - name: S3_BUCKET
               value: "beta-leaderboard-10"
             - name: SUBMISSION_ID
-              value: test-carla-benchmark-job-1
+              value: test-carla-benchmark-job
           volumeMounts:
             - mountPath: /logs
               name: logs
