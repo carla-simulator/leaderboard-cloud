@@ -10,23 +10,37 @@ export PYTHONPATH="${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 LOGCOPY_DONE_FILE="/logs/containers-status/logcopy.done"
 SIMULATION_CANCEL_FILE="/logs/containers-status/simulation.cancel"
 
+###########
+## UTILS ##
+###########
+get_submission_status() {
+  ADDR="$EVALAI_API_SERVER/api/jobs/submission/$SUBMISSION_PK"
+  HEADER="Authorization: Bearer $AUTH_TOKEN"
+  STATUS=$(curl --location --request GET "$ADDR" --header "${HEADER}" | jq ".status" | sed 's:^.\(.*\).$:\1:')
+  echo $STATUS
+}
+
+update_partial_submission_status() {
+  # TODO partially evaluates, void results and read stdout
+  # Update partial submission status
+  ADDR="$EVALAI_API_SERVER/api/jobs/challenge/$CHALLENGE_ID/update_submission/"
+  HEADER="Authorization: Bearer $AUTH_TOKEN"
+  DATA='{"submission": '"${SUBMISSION_ID}"', "submission_status": "RUNNING"}'
+  curl --location --request PATCH "$ADDR" --header "$HEADER" --header 'Content-Type: application/json' --data-raw "$DATA"
+
+  aws dynamodb update-item \
+    --table-name beta-leaderboard-20 \
+    --region "us-west-2" \
+    --key '{"team_id": {"S": "${TEAM_ID}" }, "submission_id": {"S": "${SUBMISSION_ID}"} }' \
+    --update-expression "SET submission_status = :s, results = :r" \
+    --expression-attribute-values '{":s": {"S": "Running"}, ":r": {"S", '"s3://${S3_BUCKET}/${SUBMISSION_ID}"'}}'
+}
+
 ########################
 ## LOGCOPY PARAMETERS ##
 ########################
 [[ -z "${LOGS_PERIOD}" ]] && export LOGS_PERIOD="10"
 [ -f $SIMULATION_CANCEL_FILE ] && rm $SIMULATION_CANCEL_FILE
-
-get_submission_status() {
-
-  ADDR="$EVALAI_API_SERVER/api/jobs/submission/$SUBMISSION_PK"
-  HEADER="Authorization: Bearer $AUTH_TOKEN"
-  echo $ADDR
-  echo $HEADER
-
-  STATUS=$(curl --location --request GET "$ADDR" --header "${HEADER}" | jq ".status" | sed 's:^.\(.*\).$:\1:')
-
-  echo $STATUS
-}
 
 while sleep ${LOGS_PERIOD} ; do
   echo ""
@@ -47,7 +61,8 @@ while sleep ${LOGS_PERIOD} ; do
     break
   fi
 
-  echo "Pushing to evalai" # TODO
+  echo "Updating partial submission status"
+  update_partial_submission_status
 
   DONE_FILES=$(find /logs/containers-status -name *.done* | wc -l)
   echo "Number of finished containers: $DONE_FILES"
