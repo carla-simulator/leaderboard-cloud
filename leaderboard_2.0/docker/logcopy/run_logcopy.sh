@@ -73,9 +73,9 @@ update_partial_submission_status() {
     aws dynamodb update-item \
       --table-name beta-leaderboard-20 \
       --region "us-west-2" \
-      --key '{"team_id": {"S": '"${TEAM_ID}"' }, "submission_id": {"S": '"${SUBMISSION_ID}"'} }' \
+      --key '{"team_id": {"S": "'"${TEAM_ID}"'" }, "submission_id": {"S": "'"${SUBMISSION_ID}"'"} }' \
       --update-expression "SET submission_status = :s, results = :r" \
-      --expression-attribute-values '{":s": {"S": "Running"}, ":r": {"S", '"s3://${S3_BUCKET}/${SUBMISSION_ID}"'}}'
+      --expression-attribute-values '{":s": {"S": "Running"}, ":r": {"S": "'"s3://${S3_BUCKET}/${SUBMISSION_ID}"'"}}'
     UPDATED_DB=true
   fi
 }
@@ -114,6 +114,7 @@ while sleep ${LOGS_PERIOD} ; do
   if [ $DONE_FILES -ge 8 ]; then
     echo "Detected that all containers have finished. Stopping..."
     touch $LOGCOPY_DONE_FILE
+    merge_statistics
     generate_evalai_files
     push_to_s3
     break
