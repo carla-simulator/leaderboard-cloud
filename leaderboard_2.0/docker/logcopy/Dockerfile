@@ -2,6 +2,9 @@ FROM python:3.7
 
 WORKDIR /workspace
 
+RUN apt-get install -y --no-install-recommends jq \
+    && rm -rf /var/lib/apt/lists/* 
+
 # Install aws cli v2
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
     && unzip awscliv2.zip \
@@ -10,8 +13,7 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 
 RUN pip3 install \
     requests \
-    dictor \
-    jq
+    dictor
 
 COPY run_logcopy.sh /workspace/run_logcopy.sh
 
