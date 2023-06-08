@@ -2,7 +2,8 @@ FROM python:3.7
 
 WORKDIR /workspace
 
-RUN apt-get install -y --no-install-recommends jq \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends jq \
     && rm -rf /var/lib/apt/lists/* 
 
 # Install aws cli v2
