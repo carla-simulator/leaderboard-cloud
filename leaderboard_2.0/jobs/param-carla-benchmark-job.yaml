@@ -305,8 +305,14 @@ spec:
           env:
             - name: S3_BUCKET
               value: "beta-leaderboard-20"
+            - name: CHALLENGE_ID
+              value$: $.challenge_id
+            - name: TEAM_ID
+              value.$: $.team_id
             - name: SUBMISSION_ID
               value.$: $.submission_id
+            - name: TRACK_ID
+              value.$: $.track_id
           volumeMounts:
             - mountPath: /logs
               name: logs
