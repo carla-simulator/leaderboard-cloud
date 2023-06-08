@@ -87,7 +87,7 @@ while sleep ${LOGS_PERIOD} ; do
   aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
 
   echo "Checking if the submission has been cancelled"
-  if [[ $(get_submission_status) -eq "cancelled" ]] ; then
+  if [[ $(get_submission_status) == "cancelled" ]] ; then
     echo "Detected that the submission has been cancelled. Stopping..."
     touch $SIMULATION_CANCEL_FILE
     aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
