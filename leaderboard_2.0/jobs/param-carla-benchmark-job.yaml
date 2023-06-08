@@ -312,7 +312,7 @@ spec:
             - name: S3_BUCKET
               value: "beta-leaderboard-20"
             - name: CHALLENGE_ID
-              value$: $.challenge_id
+              value.$: $.challenge_id
             - name: TEAM_ID
               value.$: $.team_id
             - name: SUBMISSION_ID
