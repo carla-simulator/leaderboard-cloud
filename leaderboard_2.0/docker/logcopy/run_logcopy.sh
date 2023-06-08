@@ -57,6 +57,16 @@ update_partial_submission_status() {
   fi
 }
 
+generate_evalai_files() {
+  python3.7 ${LEADERBOARD_ROOT}/scripts/generate_evalai_stdout.py \
+    --file-path /logs/agent_results.json \
+    --endpoint /logs/evalai/stdout.txt
+  python3.7 ${LEADERBOARD_ROOT}/scripts/generate_evalai_results.py \
+    --file-path /logs/agent_results.json \
+    --endpoint /logs/evalai/results.json
+  [ -f /logs/agent_results.json ] && cp /logs/agent_results.json /logs/evalai/metadata.json
+}
+
 ########################
 ## LOGCOPY PARAMETERS ##
 ########################
@@ -71,14 +81,7 @@ while sleep ${LOGS_PERIOD} ; do
     --file-paths /logs/agent{1..4}/agent_results.json \
     --endpoint /logs/agent_results.json
 
-  # Generate EvalAI files
-  python3.7 ${LEADERBOARD_ROOT}/scripts/generate_evalai_stdout.py \
-    --file-path /logs/agent_results.json \
-    --endpoint /logs/evalai/stdout.txt
-  python3.7 ${LEADERBOARD_ROOT}/scripts/generate_evalai_results.py \
-    --file-path /logs/agent_results.json \
-    --endpoint /logs/evalai/results.json
-  [ -f /logs/agent_results.json ] && cp /logs/agent_results.json /logs/evalai/metadata.json
+  generate_evalai_files
 
   echo "Pushing to S3"
   aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
@@ -99,6 +102,7 @@ while sleep ${LOGS_PERIOD} ; do
   if [ $DONE_FILES -ge 8 ]; then
     echo "Detected that all containers have finished. Stopping..."
     touch $LOGCOPY_DONE_FILE
+    generate_evalai_files
     aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
     break
   fi
