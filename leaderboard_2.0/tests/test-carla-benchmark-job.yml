@@ -4,7 +4,6 @@ metadata:
   name: submission-parallel
 spec:
   backoffLimit: 8
-  ttlSecondsAfterFinished: 10
   template:
     spec:
       serviceAccountName: submission-worker

@@ -78,13 +78,13 @@ while sleep ${LOGS_PERIOD} ; do
   python3.7 ${LEADERBOARD_ROOT}/scripts/generate_evalai_results.py \
     --file-path /logs/agent_results.json \
     --endpoint /logs/evalai/results.json
-  cp /logs/agent_results.json /logs/evalai/metadata.json
+  [ -f /logs/agent_results.json ] && cp /logs/agent_results.json /logs/evalai/metadata.json
 
   echo "Pushing to S3"
   aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
 
   echo "Checking if the submission has been cancelled"
-  if [ $(get_submission_status) == "cancelled" ] ; then
+  if [[ $(get_submission_status) -eq "cancelled" ]] ; then
     echo "Detected that the submission has been cancelled. Stopping..."
     touch $SIMULATION_CANCEL_FILE
     aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
