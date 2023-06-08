@@ -13,11 +13,39 @@ export EVALAI_API_SERVER="https://staging.eval.ai"
 
 LOGCOPY_DONE_FILE="/logs/containers-status/logcopy.done"
 SIMULATION_CANCEL_FILE="/logs/containers-status/simulation.cancel"
+AGENT_RESULTS_FILE="/logs/agent/agent_results.json"
+PARTIAL_AGENT_RESULTS_FILE="/logs/agent/agent{1..4}/agent_results.json"
+EVALAI_RESULTS_FILE="/logs/evalai/results.json"
+EVALAI_STDOUT_FILE="/logs/evalai/stdout.json"
+EVALAI_METADATA_FILE="/logs/evalai/metadata.json"
+
 UPDATED_DB=false
 
 ###########
 ## UTILS ##
 ###########
+merge_statistics() {
+  python3.7 ${LEADERBOARD_ROOT}/scripts/merge_statistics.py \
+    --file-paths $PARTIAL_AGENT_RESULTS_FILE \
+    --endpoint $AGENT_RESULTS_FILE
+}
+
+generate_evalai_files() {
+  python3.7 /workspace/evalai/generate_stdout.py \
+    --file-path $AGENT_RESULTS_FILE \
+    --endpoint $EVALAI_STDOUT_FILE
+  python3.7 /workspace/evalai/generate_results.py  \
+    --file-path $AGENT_RESULTS_FILE \
+    --endpoint $EVALAI_RESULTS_FILE
+  python3.7 /workspace/evalai/generate_metadata.py \
+    --file-path $AGENT_RESULTS_FILE \
+    --endpoint $EVALAI_METADATA_FILE
+}
+
+push_to_s3() {
+  aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
+}
+
 get_submission_status() {
   ADDR="$EVALAI_API_SERVER/api/jobs/submission/$SUBMISSION_ID"
   HEADER="Authorization: Bearer $AUTH_TOKEN"
@@ -26,14 +54,9 @@ get_submission_status() {
 }
 
 update_partial_submission_status() {
-  STDOUT=$(cat /logs/evalai/stdout.txt)
-  STDOUT_STR=$(jq -n -c --arg m "$STDOUT" '$m')
-
-  RESULTS=$(cat /logs/evalai/results.json)
-  RESULTS_STR=$(jq -n -c --arg m "$RESULTS" '$m')
-
-  METADATA=$(cat /logs/evalai/metadata.json)
-  METADATA_STR=$(jq -n -c --arg m "$METADATA" '$m')
+  STDOUT_STR=$(jq -n -c --arg m "$(cat $EVALAI_STDOUT_FILE)" '$m')
+  RESULTS_STR=$(jq -n -c --arg m "$(cat $EVALAI_RESULTS_FILE)" '$m')
+  METADATA_STR=$(jq -n -c --arg m "$(cat $EVALAI_METADATA_FILE)" '$m')
 
   ADDR="$EVALAI_API_SERVER/api/jobs/challenges/$CHALLENGE_ID/update_partially_evaluated_submission/"
   HEADER="Authorization: Bearer $AUTH_TOKEN"
@@ -57,16 +80,6 @@ update_partial_submission_status() {
   fi
 }
 
-generate_evalai_files() {
-  python3.7 ${LEADERBOARD_ROOT}/scripts/generate_evalai_stdout.py \
-    --file-path /logs/agent_results.json \
-    --endpoint /logs/evalai/stdout.txt
-  python3.7 ${LEADERBOARD_ROOT}/scripts/generate_evalai_results.py \
-    --file-path /logs/agent_results.json \
-    --endpoint /logs/evalai/results.json
-  [ -f /logs/agent_results.json ] && cp /logs/agent_results.json /logs/evalai/metadata.json
-}
-
 ########################
 ## LOGCOPY PARAMETERS ##
 ########################
@@ -76,35 +89,36 @@ generate_evalai_files() {
 while sleep ${LOGS_PERIOD} ; do
   echo ""
   echo "[$(date +"%Y-%m-%d %T")] Starting log copy"
-  echo "Merging statistics"
-  python3.7 ${LEADERBOARD_ROOT}/scripts/merge_statistics.py \
-    --file-paths /logs/agent{1..4}/agent_results.json \
-    --endpoint /logs/agent_results.json
+  echo "> Merging statistics"
+  merge_statistics
 
+  echo "> Generating EvalAI files"
   generate_evalai_files
 
-  echo "Pushing to S3"
-  aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
+  echo "> Pushing to S3"
+  push_to_s3
 
-  echo "Checking if the submission has been cancelled"
+  echo "> Checking if the submission has been cancelled"
   if [[ $(get_submission_status) == "cancelled" ]] ; then
     echo "Detected that the submission has been cancelled. Stopping..."
     touch $SIMULATION_CANCEL_FILE
-    aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
+    push_to_s3
     break
   fi
 
-  echo "Updating partial submission status"
+  echo "> Updating partial submission status"
   update_partial_submission_status
 
+  echo "> Checking end condition"
   DONE_FILES=$(find /logs/containers-status -name *.done* | wc -l)
-  echo "Number of finished containers: $DONE_FILES"
   if [ $DONE_FILES -ge 8 ]; then
     echo "Detected that all containers have finished. Stopping..."
     touch $LOGCOPY_DONE_FILE
     generate_evalai_files
-    aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
+    push_to_s3
     break
+  else
+    echo "Detected that only $DONE_FILES out of the 8 containers have finished. Waiting..."
   fi
 
 done

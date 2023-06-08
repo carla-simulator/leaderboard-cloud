@@ -20,10 +20,19 @@ spec:
               cp -r ${SCENARIO_RUNNER_ROOT}/* /tmp/scenario_runner/
               cp -r ${CARLA_PYTHON_API_ROOT}/* /tmp/CARLA/
 
-              mkdir -m 0777 -p /tmp/logs/agent{1..4}
-              mkdir -m 0777 -p /tmp/logs/simulator
-              mkdir -m 0777 -p /tmp/logs/containers-status
-              mkdir -m 0777 -p /tmp/logs/evalai
+              if [ -z $RESUME ]; then
+                echo "Detected a normal run, creating log files"
+                mkdir -m 0777 -p logs/agent/agent{1..4}
+                mkdir -m 0777 -p logs/simulator
+                mkdir -m 0777 -p logs/containers-status
+                mkdir -m 0777 -p logs/evalai
+              else
+                echo "Detected a resume, download log files from S3"
+                aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID} logs
+              fi
+          env:
+            - name: RESUME
+              value: ""
           volumeMounts:
             - mountPath: /tmp/leaderboard
               name: leaderboard
@@ -95,7 +104,7 @@ spec:
               name: carla-python-api
             - mountPath: /tmp/agent
               name: logs
-              subPath: agent1
+              subPath: agent/agent1
             - mountPath: /tmp/status
               name: logs
               subPath: containers-status
@@ -160,7 +169,7 @@ spec:
               name: carla-python-api
             - mountPath: /tmp/agent
               name: logs
-              subPath: agent2
+              subPath: agent/agent2
             - mountPath: /tmp/status
               name: logs
               subPath: containers-status
@@ -225,7 +234,7 @@ spec:
               name: carla-python-api
             - mountPath: /tmp/agent
               name: logs
-              subPath: agent3
+              subPath: agent/agent3
             - mountPath: /tmp/status
               name: logs
               subPath: containers-status
@@ -290,7 +299,7 @@ spec:
               name: carla-python-api
             - mountPath: /tmp/agent
               name: logs
-              subPath: agent4
+              subPath: agent/agent4
             - mountPath: /tmp/status
               name: logs
               subPath: containers-status

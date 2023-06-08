@@ -17,5 +17,7 @@ RUN pip3 install \
     dictor
 
 COPY run_logcopy.sh /workspace/run_logcopy.sh
+COPY run_logcopy.sh /workspace/evalai/generate_results.py
+COPY run_logcopy.sh /workspace/evalai/generate_stdout.py
 
 CMD ["/bin/bash"]
