@@ -14,7 +14,6 @@ export EVALAI_API_SERVER="https://staging.eval.ai"
 LOGCOPY_DONE_FILE="/logs/containers-status/logcopy.done"
 SIMULATION_CANCEL_FILE="/logs/containers-status/simulation.cancel"
 AGENT_RESULTS_FILE="/logs/agent/agent_results.json"
-PARTIAL_AGENT_RESULTS_FILE="/logs/agent/agent{1..4}/agent_results.json"
 EVALAI_RESULTS_FILE="/logs/evalai/results.json"
 EVALAI_STDOUT_FILE="/logs/evalai/stdout.txt"
 EVALAI_METADATA_FILE="/logs/evalai/metadata.json"
@@ -26,7 +25,7 @@ UPDATED_DB=false
 ###########
 merge_statistics() {
   python3.7 ${LEADERBOARD_ROOT}/scripts/merge_statistics.py \
-    --file-paths $PARTIAL_AGENT_RESULTS_FILE \
+    --file-paths /logs/agent/agent{1..4}/agent_results.json
     --endpoint $AGENT_RESULTS_FILE
 }
 
