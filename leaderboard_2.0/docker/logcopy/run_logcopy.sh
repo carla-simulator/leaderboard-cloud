@@ -25,7 +25,7 @@ UPDATED_DB=false
 ###########
 merge_statistics() {
   python3.7 ${LEADERBOARD_ROOT}/scripts/merge_statistics.py \
-    --file-paths /logs/agent/agent{1..4}/agent_results.json
+    --file-paths /logs/agent/agent{1..4}/agent_results.json \
     --endpoint $AGENT_RESULTS_FILE
 }
 
