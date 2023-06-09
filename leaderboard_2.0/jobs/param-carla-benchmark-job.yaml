@@ -26,9 +26,11 @@ spec:
                 mkdir -m 0777 -p /tmp/logs/simulator
                 mkdir -m 0777 -p /tmp/logs/containers-status
                 mkdir -m 0777 -p /tmp/logs/evalai
+
               else
                 echo "Detected a resume, download log files from S3"
                 aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID} /tmp/logs
+
               fi
           volumeMounts:
             - mountPath: /tmp/leaderboard
