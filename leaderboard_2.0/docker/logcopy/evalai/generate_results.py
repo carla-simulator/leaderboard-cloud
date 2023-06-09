@@ -43,9 +43,9 @@ def main():
                     "split": "leaderboard",
                     "show_to_participant": True,
                     "accuracies": {
-                        "Driving score": global_records['scores']['score_composed'],
-                        "Route completion": global_records['scores']['score_route'],
-                        "Infraction penalty": global_records['scores']['score_penalty'],
+                        "Driving score": global_records['scores_mean']['score_composed'],
+                        "Route completion": global_records['scores_mean']['score_route'],
+                        "Infraction penalty": global_records['scores_mean']['score_penalty'],
                         "Collisions pedestrians": global_records['infractions']['collisions_pedestrian'],
                         "Collisions vehicles": global_records['infractions']['collisions_vehicle'],
                         "Collisions layout": global_records['infractions']['collisions_layout'],
