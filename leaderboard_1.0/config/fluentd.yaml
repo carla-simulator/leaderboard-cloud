@@ -12,7 +12,6 @@ data:
       @type tail
       @id in_tail_container_logs
       path /var/log/containers/*simulator*.log, /var/log/containers/*agent*.log, /var/log/containers/*logcopy*.log
-      # exclude_path "/var/log/containers/fluent*"
       pos_file "/var/log/fluentd-containers.log.pos"
       tag "kubernetes.*"
       read_from_head true
