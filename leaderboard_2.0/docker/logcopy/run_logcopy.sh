@@ -16,7 +16,7 @@ SIMULATION_CANCEL_FILE="/logs/containers-status/simulation.cancel"
 AGENT_RESULTS_FILE="/logs/agent/agent_results.json"
 PARTIAL_AGENT_RESULTS_FILE="/logs/agent/agent{1..4}/agent_results.json"
 EVALAI_RESULTS_FILE="/logs/evalai/results.json"
-EVALAI_STDOUT_FILE="/logs/evalai/stdout.json"
+EVALAI_STDOUT_FILE="/logs/evalai/stdout.txt"
 EVALAI_METADATA_FILE="/logs/evalai/metadata.json"
 
 UPDATED_DB=false

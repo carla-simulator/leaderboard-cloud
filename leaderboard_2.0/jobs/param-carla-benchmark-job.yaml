@@ -22,13 +22,13 @@ spec:
 
               if [ -z $RESUME ]; then
                 echo "Detected a normal run, creating log files"
-                mkdir -m 0777 -p logs/agent/agent{1..4}
-                mkdir -m 0777 -p logs/simulator
-                mkdir -m 0777 -p logs/containers-status
-                mkdir -m 0777 -p logs/evalai
+                mkdir -m 0777 -p /tmp/logs/agent/agent{1..4}
+                mkdir -m 0777 -p /tmp/logs/simulator
+                mkdir -m 0777 -p /tmp/logs/containers-status
+                mkdir -m 0777 -p /tmp/logs/evalai
               else
                 echo "Detected a resume, download log files from S3"
-                aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID} logs
+                aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID} /tmp/logs
               fi
           volumeMounts:
             - mountPath: /tmp/leaderboard
