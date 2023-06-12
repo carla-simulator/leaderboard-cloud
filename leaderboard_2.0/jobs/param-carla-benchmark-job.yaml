@@ -32,6 +32,13 @@ spec:
                 aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID} /tmp/logs
 
               fi
+          env:
+            - name: RESUME
+              value.$: $.resume
+            - name: S3_BUCKET
+              value: "beta-leaderboard-20"
+            - name: SUBMISSION_ID
+              value.$: $.submission_id
           volumeMounts:
             - mountPath: /tmp/leaderboard
               name: leaderboard
@@ -141,7 +148,7 @@ spec:
           command: ["/bin/bash", "-c"]
           args:
             - |
-              bash /workspace/leaderboard/run_leaderboard.sh 
+              bash /workspace/leaderboard/run_leaderboard.sh
           env:
             - name: CARLA_PORT
               value: "2100"
@@ -206,7 +213,7 @@ spec:
           command: ["/bin/bash", "-c"]
           args:
             - |
-              bash /workspace/leaderboard/run_leaderboard.sh 
+              bash /workspace/leaderboard/run_leaderboard.sh
           env:
             - name: CARLA_PORT
               value: "2200"

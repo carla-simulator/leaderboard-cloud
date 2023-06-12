@@ -12,6 +12,11 @@ iamIdentityMappings:
       - system:masters
     username: admin
     noDuplicateARNs: true # prevents shadowing of ARNs
+  - arn: arn:aws:iam::342236305043:role/StepFunctions-beta-leaderboard-10-role-633a67a1
+    groups:
+      - system:masters
+    username: admin
+    noDuplicateARNs: true # prevents shadowing of ARNs
 
 iam:
   withOIDC: true
@@ -25,6 +30,7 @@ iam:
       - Effect: Allow
         Action:
         - "logs:CreateLogStream"
+        - "logs:CreateLogGroup"
         - "logs:PutLogEvents"
         - "logs:DescribeLogGroups"
         - "logs:DescribeLogStreams"
@@ -50,10 +56,16 @@ iam:
         # Based on AWSS3FullAccess, grant read + write access to S3“
         - "s3:*"
         - "s3-object-lambda:*"
+        # DynamoDB
+        - "dynamodb:GetItem"
+        - "dynamodb:DeleteItem"
+        - "dynamodb:PutItem"
+        - "dynamodb:UpdateItem"
         Resource:
-        # All ECR repositories and a specific S3 bucket
+        # All ECR repositories, a specific S3 bucket, and the database
         - "arn:aws:ecr:*:342236305043:repository/*"
         - "arn:aws:s3:::beta-leaderboard-10*"
+        - "arn:aws:dynamodb:*:342236305043:table/beta-leaderboard-10"
 
 nodeGroups:
   - name: basic-worker

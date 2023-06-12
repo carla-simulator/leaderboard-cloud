@@ -30,9 +30,6 @@ def main():
                 "Route deviations": 0,
                 "Route timeouts": 0,
                 "Agent blocked": 0,
-                "Yield emergency vehicle infractions": 0,
-                "Scenario timeouts": 0,
-                "Min speed infractions": 0,
             }
         }
     ]
@@ -46,9 +43,9 @@ def main():
                     "split": "leaderboard",
                     "show_to_participant": True,
                     "accuracies": {
-                        "Driving score": global_records['scores_mean']['score_composed'],
-                        "Route completion": global_records['scores_mean']['score_route'],
-                        "Infraction penalty": global_records['scores_mean']['score_penalty'],
+                        "Driving score": global_records['scores']['score_composed'],
+                        "Route completion": global_records['scores']['score_route'],
+                        "Infraction penalty": global_records['scores']['score_penalty'],
                         "Collisions pedestrians": global_records['infractions']['collisions_pedestrian'],
                         "Collisions vehicles": global_records['infractions']['collisions_vehicle'],
                         "Collisions layout": global_records['infractions']['collisions_layout'],
@@ -57,10 +54,7 @@ def main():
                         "Off-road infractions": global_records['infractions']['outside_route_lanes'],
                         "Route deviations": global_records['infractions']['route_dev'],
                         "Route timeouts": global_records['infractions']['route_timeout'],
-                        "Agent blocked": global_records['infractions']['vehicle_blocked'],
-                        "Yield emergency vehicle infractions": global_records['infractions']['yield_emergency_vehicles_infractions'],
-                        "Scenario timeouts": global_records['infractions']['scenario_timeouts'],
-                        "Min speed infractions": global_records['infractions']['min_speed_infractions'],
+                        "Agent blocked": global_records['infractions']['vehicle_blocked']
                     }
                 }
             ]

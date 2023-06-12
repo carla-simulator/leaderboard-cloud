@@ -3,6 +3,7 @@ kind: Job
 metadata:
   name: submission-parallel
 spec:
+  backoffLimit: 8
   template:
     spec:
       serviceAccountName: submission-worker
@@ -19,9 +20,25 @@ spec:
               cp -r ${SCENARIO_RUNNER_ROOT}/* /tmp/scenario_runner/
               cp -r ${CARLA_PYTHON_API_ROOT}/* /tmp/CARLA/
 
-              mkdir -m 0777 -p /tmp/logs/agent{1..4}
-              mkdir -m 0777 -p /tmp/logs/simulator
-              mkdir -m 0777 -p /tmp/logs/containers-status
+              if [ -z $RESUME ]; then
+                echo "Detected a normal run, creating log files"
+                mkdir -m 0777 -p /tmp/logs/agent/agent{1..4}
+                mkdir -m 0777 -p /tmp/logs/simulator
+                mkdir -m 0777 -p /tmp/logs/containers-status
+                mkdir -m 0777 -p /tmp/logs/evalai
+
+              else
+                echo "Detected a resume, download log files from S3"
+                aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID} /tmp/logs
+
+              fi
+          env:
+            - name: RESUME
+              value.$: $.resume
+            - name: S3_BUCKET
+              value: "beta-leaderboard-20"
+            - name: SUBMISSION_ID
+              value.$: $.submission_id
           volumeMounts:
             - mountPath: /tmp/leaderboard
               name: leaderboard
@@ -91,7 +108,7 @@ spec:
               name: carla-python-api
             - mountPath: /tmp/agent
               name: logs
-              subPath: agent1
+              subPath: agent/agent1
             - mountPath: /tmp/status
               name: logs
               subPath: containers-status
@@ -154,7 +171,7 @@ spec:
               name: carla-python-api
             - mountPath: /tmp/agent
               name: logs
-              subPath: agent2
+              subPath: agent/agent2
             - mountPath: /tmp/status
               name: logs
               subPath: containers-status
@@ -217,7 +234,7 @@ spec:
               name: carla-python-api
             - mountPath: /tmp/agent
               name: logs
-              subPath: agent3
+              subPath: agent/agent3
             - mountPath: /tmp/status
               name: logs
               subPath: containers-status
@@ -280,7 +297,7 @@ spec:
               name: carla-python-api
             - mountPath: /tmp/agent
               name: logs
-              subPath: agent4
+              subPath: agent/agent4
             - mountPath: /tmp/status
               name: logs
               subPath: containers-status
@@ -295,8 +312,14 @@ spec:
           env:
             - name: S3_BUCKET
               value: "beta-leaderboard-10"
+            - name: CHALLENGE_ID
+              value.$: $.challenge_id
+            - name: TEAM_ID
+              value.$: $.team_id
             - name: SUBMISSION_ID
               value.$: $.submission_id
+            - name: TRACK_ID
+              value.$: $.track_id
           volumeMounts:
             - mountPath: /logs
               name: logs
@@ -315,5 +338,3 @@ spec:
           emptyDir: {}
         - name: logs
           emptyDir: {}
-
-  backoffLimit: 8
