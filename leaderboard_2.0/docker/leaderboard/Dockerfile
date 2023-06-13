@@ -1,9 +1,10 @@
-FROM python:3.7
+#FROM python:3.7
+FROM ubuntu:20.04
 
 WORKDIR /workspace
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends jq \
+    && apt-get install -y --no-install-recommends ca-certificates curl unzip \
     && rm -rf /var/lib/apt/lists/* 
 
 # Install aws cli v2
