@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name.$: $.submission.submission_name
+  name.$: $.submission.name
 spec:
   backoffLimit: 8
   template:
