@@ -63,17 +63,17 @@ def lambda_handler(event, context):
     manager = urllib3.PoolManager()
     out = json.loads(manager.request(
         method="PUT",
-        url="{}{}{}{}".format(evalai_secrets["api_server"], "/api/jobs/challenge/", event["challenge_id"], "/update_submission/"),
+        url="{}{}{}{}".format(evalai_secrets["api_server"], "/api/jobs/challenge/", event["submission"]["challenge_id"], "/update_submission/"),
         headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"]), "Content-Type": "application/json"},
         body=json.dumps({
-            "submission": all_submission_data["submission_id"],
-            "challenge_phase": all_submission_data["track_id"],
-            "submission_status": all_submission_data["submission_status"],
-            "result": all_submission_data["result"],
-            "stdout": all_submission_data["stdout"],
-            "stderr": all_submission_data["stderr"],
-            "environment_log": all_submission_data["environment_log"],
-            "metadata": all_submission_data["metadata"],
+            "submission": all_submission_data["submission"]["submission_id"],
+            "challenge_phase": all_submission_data["submission"]["track_id"],
+            "submission_status": all_submission_data["submission"]["submission_status"],
+            "result": all_submission_data["submission"]["result"],
+            "stdout": all_submission_data["submission"]["stdout"],
+            "stderr": all_submission_data["submission"]["stderr"],
+            "environment_log": all_submission_data["submission"]["environment_log"],
+            "metadata": all_submission_data["submission"]["metadata"],
         })
     ).data)
 

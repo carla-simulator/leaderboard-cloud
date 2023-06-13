@@ -41,19 +41,22 @@ def lambda_handler(event, context):
     ).data)
 
     if phase_data.get("codename", "").startswith("leaderboard-10"):
-        cluster_secrets = get_secret(secret_id="beta-leaderboard-10")
+        cluster_secrets = get_secret(secret_id="leaderboard-10")
     else:
-        cluster_secrets = get_secret(secret_id="beta-leaderboard-20")
+        cluster_secrets = get_secret(secret_id="leaderboard-20")
 
     return {
         "cluster": {
-            "name": phase_data.get("codename", "").rsplit("-", 1)[0],
+            "id": 1 if phase_data.get("codename", "").startswith("leaderboard-10") else 2,
+            "name": cluster_secrets["name"],
+            "endpoint": cluster_secrets["endpoint"],
+            "certificate_authority": cluster_secrets["certificate_authority"],
             "simulator_image": cluster_secrets["simulator_image"],
             "leaderboard_image": cluster_secrets["leaderboard_image"],
             "logcopy_image": cluster_secrets["logcopy_image"]
         },
         "submission": {
-            "submission_name": "submission-{}".format(str(event["submission_pk"])),
+            "name": "submission-{}".format(str(event["submission_pk"])),
             "challenge_id": str(event["challenge_pk"]),
             "submission_id": str(event["submission_pk"]),
             "team_id": str(submission_data.get("participant_team", "")),
