@@ -21,9 +21,18 @@ spec:
               cp -r ${SCENARIO_RUNNER_ROOT}/* /tmp/scenario_runner/
               cp -r ${CARLA_PYTHON_API_ROOT}/* /tmp/CARLA/
 
-              mkdir -m 0777 -p /tmp/logs/agent{1..4}
-              mkdir -m 0777 -p /tmp/logs/simulator
-              mkdir -m 0777 -p /tmp/logs/containers-status
+              if [ -z $RESUME ]; then
+                echo "Detected a normal run, creating log files"
+                mkdir -m 0777 -p logs/agent/agent{1..4}
+                mkdir -m 0777 -p logs/simulator
+                mkdir -m 0777 -p logs/containers-status
+                mkdir -m 0777 -p logs/evalai
+              else
+                echo "Detected a resume, download log files from S3, and removing the container status data"
+                aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive
+                aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID} /tmp/logs
+                mkdir -m 0777 -p /tmp/logs/containers-status
+              fi
           volumeMounts:
             - mountPath: /tmp/leaderboard
               name: leaderboard

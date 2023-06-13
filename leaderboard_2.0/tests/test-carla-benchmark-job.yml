@@ -27,8 +27,10 @@ spec:
                 mkdir -m 0777 -p logs/containers-status
                 mkdir -m 0777 -p logs/evalai
               else
-                echo "Detected a resume, download log files from S3"
-                aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID} logs
+                echo "Detected a resume, download log files from S3, and removing the container status data"
+                aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive
+                aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID} /tmp/logs
+                mkdir -m 0777 -p /tmp/logs/containers-status
               fi
           volumeMounts:
             - mountPath: /tmp/leaderboard
