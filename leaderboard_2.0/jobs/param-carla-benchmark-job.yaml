@@ -26,11 +26,11 @@ spec:
                 mkdir -m 0777 -p /tmp/logs/simulator
                 mkdir -m 0777 -p /tmp/logs/containers-status
                 mkdir -m 0777 -p /tmp/logs/evalai
-
               else
-                echo "Detected a resume, download log files from S3"
+                echo "Detected a resume, download log files from S3, and removing the container status data"
+                aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive
                 aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID} /tmp/logs
-
+                mkdir -m 0777 -p /tmp/logs/containers-status
               fi
           env:
             - name: SUBMISSION_ID
