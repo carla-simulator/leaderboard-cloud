@@ -7,10 +7,6 @@ export SCENARIO_RUNNER_ROOT="/utils/scenario_runner"
 export LEADERBOARD_ROOT="/utils/leaderboard"
 export PYTHONPATH="${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 
-# TODO: REMOVE
-export AUTH_TOKEN="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTcwNzk4ODg5NiwianRpIjoiYzEzNTFiMTg0NmJiNDRkMjlhY2EwZmMyMDA2YzJjYjUiLCJ1c2VyX2lkIjo0MTd9.9i_tGvpfEpcIPFuwLRGpxrhPDmHB26p0HBJogQNw1ZA"
-export EVALAI_API_SERVER="https://staging.eval.ai"
-
 LOGCOPY_DONE_FILE="/logs/containers-status/logcopy.done"
 SIMULATION_CANCEL_FILE="/logs/containers-status/simulation.cancel"
 AGENT_RESULTS_FILE="/logs/agent/agent_results.json"
@@ -47,7 +43,7 @@ push_to_s3() {
 
 get_submission_status() {
   ADDR="$EVALAI_API_SERVER/api/jobs/submission/$SUBMISSION_ID"
-  HEADER="Authorization: Bearer $AUTH_TOKEN"
+  HEADER="Authorization: Bearer $EVALAI_AUTH_TOKEN"
   STATUS=$(curl --location --request GET "$ADDR" --header "${HEADER}" | jq ".status" | sed 's:^.\(.*\).$:\1:')
   echo $STATUS
 }
@@ -58,7 +54,7 @@ update_partial_submission_status() {
   METADATA_STR=$(jq -n -c --arg m "$(cat $EVALAI_METADATA_FILE)" '$m')
 
   ADDR="$EVALAI_API_SERVER/api/jobs/challenges/$CHALLENGE_ID/update_partially_evaluated_submission/"
-  HEADER="Authorization: Bearer $AUTH_TOKEN"
+  HEADER="Authorization: Bearer $EVALAI_AUTH_TOKEN""
   DATA='{"submission": '"$SUBMISSION_ID"',
         "submission_status": "PARTIALLY_EVALUATED",
         "challenge_phase": '"$TRACK_ID"',
@@ -70,8 +66,7 @@ update_partial_submission_status() {
 
   if [ "$UPDATED_DB" = false ]; then
     aws dynamodb update-item \
-      --table-name beta-leaderboard-20 \
-      --region "us-west-2" \
+      --table-name "$DYNAMODB_TABLE" \
       --key '{"team_id": {"S": "'"${TEAM_ID}"'" }, "submission_id": {"S": "'"${SUBMISSION_ID}"'"} }' \
       --update-expression "SET submission_status = :s, results = :r" \
       --expression-attribute-values '{":s": {"S": "Running"}, ":r": {"S": "'"s3://${S3_BUCKET}/${SUBMISSION_ID}"'"}}'
