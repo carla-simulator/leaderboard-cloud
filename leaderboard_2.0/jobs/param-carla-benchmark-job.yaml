@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: submission-parallel
+  name.$: $.submission.submission_name
 spec:
   backoffLimit: 8
   template:
@@ -12,7 +12,7 @@ spec:
 
       initContainers:
         - name: private-contents
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
+          image.$: $.cluster.leaderboard_image
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -33,12 +33,12 @@ spec:
 
               fi
           env:
-            - name: RESUME
-              value.$: $.resume
-            - name: S3_BUCKET
-              value: "beta-leaderboard-20"
             - name: SUBMISSION_ID
-              value.$: $.submission_id
+              value.$: $.submission.submission_id
+            - name: RESUME
+              value.$: $.submission.resume
+            - name: S3_BUCKET
+              value.$: "$.aws.s3_bucket"
           volumeMounts:
             - mountPath: /tmp/leaderboard
               name: leaderboard
@@ -52,7 +52,7 @@ spec:
       containers:
         # First set of simulator + agent
         - name: simulator-1
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          image.$: $.cluster.simulator_image
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -79,7 +79,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-1
-          image.$: $.submitted_image_uri
+          image.$: $.submission.submitted_image_uri
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -88,7 +88,7 @@ spec:
             - name: CARLA_PORT
               value: "2000"
             - name: CHALLENGE_TRACK_CODENAME
-              value.$: $.track_codename
+              value.$: $.submission.track_codename
             - name: ROUTES_SUBSET
               value: "0-4"
             - name: ROUTES
@@ -96,7 +96,7 @@ spec:
             - name: REPETITIONS
               value: "1"
             - name: RESUME
-              value.$: $.resume
+              value.$: $.submission.resume
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
@@ -117,7 +117,7 @@ spec:
 
         # Second set of simulator + agent
         - name: simulator-2
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          image.$: $.cluster.simulator_image
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -144,7 +144,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-2
-          image.$: $.submitted_image_uri
+          image.$: $.submission.submitted_image_uri
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -153,7 +153,7 @@ spec:
             - name: CARLA_PORT
               value: "2100"
             - name: CHALLENGE_TRACK_CODENAME
-              value.$: $.track_codename
+              value.$: $.submission.track_codename
             - name: ROUTES_SUBSET
               value: "5-9"
             - name: ROUTES
@@ -161,7 +161,7 @@ spec:
             - name: REPETITIONS
               value: "1"
             - name: RESUME
-              value.$: $.resume
+              value.$: $.submission.resume
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
@@ -182,7 +182,7 @@ spec:
 
         # Third set of simulator + agent
         - name: simulator-3
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          image.$: $.cluster.simulator_image
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -209,7 +209,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-3
-          image.$: $.submitted_image_uri
+          image.$: $.submission.submitted_image_uri
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -218,7 +218,7 @@ spec:
             - name: CARLA_PORT
               value: "2200"
             - name: CHALLENGE_TRACK_CODENAME
-              value.$: $.track_codename
+              value.$: $.submission.track_codename
             - name: ROUTES_SUBSET
               value: "10-14"
             - name: ROUTES
@@ -226,7 +226,7 @@ spec:
             - name: REPETITIONS
               value: "1"
             - name: RESUME
-              value.$: $.resume
+              value.$: $.submission.resume
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
@@ -247,7 +247,7 @@ spec:
 
         # Four set of simulator + agent
         - name: simulator-4
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          image.$: $.cluster.simulator_image
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -274,7 +274,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-4
-          image.$: $.submitted_image_uri
+          image.$: $.submission.submitted_image_uri
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -283,7 +283,7 @@ spec:
             - name: CARLA_PORT
               value: "2300"
             - name: CHALLENGE_TRACK_CODENAME
-              value.$: $.track_codename
+              value.$: $.submission.track_codename
             - name: ROUTES_SUBSET
               value: "15-19"
             - name: ROUTES
@@ -291,7 +291,7 @@ spec:
             - name: REPETITIONS
               value: "1"
             - name: RESUME
-              value.$: $.resume
+              value.$: $.submission.resume
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "all"
             - name: NVIDIA_VISIBLE_DEVICES
@@ -312,22 +312,28 @@ spec:
 
         # Log copy container
         - name: logcopy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-logcopy:latest
+          image.$: $.cluster.logcopy_image
           command: ["/bin/bash", "-c"]
           args:
             - |
               bash /workspace/run_logcopy.sh
           env:
-            - name: S3_BUCKET
-              value: "beta-leaderboard-20"
             - name: CHALLENGE_ID
-              value.$: $.challenge_id
-            - name: TEAM_ID
-              value.$: $.team_id
+              value.$: $.submission.challenge_id
             - name: SUBMISSION_ID
-              value.$: $.submission_id
+              value.$: $.submission.submission_id
             - name: TRACK_ID
-              value.$: $.track_id
+              value.$: $.submission.track_id
+            - name: TEAM_ID
+              value.$: $.submission.team_id
+            - name: S3_BUCKET
+              value.$: "$.aws.s3_bucket"
+            - name: DYNAMODB_TABLE
+              value.$: "$.aws.dynamodb_table"
+            - name: EVALAI_AUTH_TOKEN
+              value.$: "$.evalai.auth_token"
+            - name: EVALAI_API_SERVER
+              value.$: "$.evalai.api_server"
           volumeMounts:
             - mountPath: /logs
               name: logs
