@@ -54,7 +54,7 @@ update_partial_submission_status() {
   METADATA_STR=$(jq -n -c --arg m "$(cat $EVALAI_METADATA_FILE)" '$m')
 
   ADDR="$EVALAI_API_SERVER/api/jobs/challenges/$CHALLENGE_ID/update_partially_evaluated_submission/"
-  HEADER="Authorization: Bearer $EVALAI_AUTH_TOKEN""
+  HEADER="Authorization: Bearer $EVALAI_AUTH_TOKEN"
   DATA='{"submission": '"$SUBMISSION_ID"',
         "submission_status": "PARTIALLY_EVALUATED",
         "challenge_phase": '"$TRACK_ID"',
