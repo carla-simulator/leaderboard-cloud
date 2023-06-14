@@ -61,7 +61,7 @@ def lambda_handler(event, context):
             "submission_id": str(event["submission_pk"]),
             "team_id": str(submission_data.get("participant_team", "")),
             "team_name": str(submission_data.get("participant_team_name", "")),
-            "submission_status": str(submission_data.get("status", "")),
+            "submission_status": str(submission_data.get("status", "")).upper(),
             "track_id": str(event["phase_pk"]),
             "track_codename": phase_data.get("codename", "").rsplit("-", 1)[1],
             "resume": "",

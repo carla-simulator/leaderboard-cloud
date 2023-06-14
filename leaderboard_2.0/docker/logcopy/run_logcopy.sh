@@ -69,7 +69,7 @@ update_partial_submission_status() {
       --table-name "$DYNAMODB_TABLE" \
       --key '{"team_id": {"S": "'"${TEAM_ID}"'" }, "submission_id": {"S": "'"${SUBMISSION_ID}"'"} }' \
       --update-expression "SET submission_status = :s, results = :r" \
-      --expression-attribute-values '{":s": {"S": "Running"}, ":r": {"S": "'"s3://${S3_BUCKET}/${SUBMISSION_ID}"'"}}'
+      --expression-attribute-values '{":s": {"S": "RUNNING"}, ":r": {"S": "'"s3://${S3_BUCKET}/${SUBMISSION_ID}"'"}}'
     UPDATED_DB=true
   fi
 }
