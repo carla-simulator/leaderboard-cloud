@@ -57,9 +57,9 @@ iam:
         - "s3:*"
         - "s3-object-lambda:*"
         # DynamoDB
-        - "dynamodb:GetItem",
-        - "dynamodb:DeleteItem",
-        - "dynamodb:PutItem",
+        - "dynamodb:GetItem"
+        - "dynamodb:DeleteItem"
+        - "dynamodb:PutItem"
         - "dynamodb:UpdateItem"
         Resource:
         # All ECR repositories and a specific S3 bucket
