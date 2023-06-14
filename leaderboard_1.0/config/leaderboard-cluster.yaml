@@ -12,7 +12,7 @@ iamIdentityMappings:
       - system:masters
     username: admin
     noDuplicateARNs: true # prevents shadowing of ARNs
-  - arn: arn:aws:iam::342236305043:role/StepFunctions-beta-leaderboard-20-role-633a67a1
+  - arn: arn:aws:iam::342236305043:role/LeaderboardStepFunctionRole
     groups:
       - system:masters
     username: admin
