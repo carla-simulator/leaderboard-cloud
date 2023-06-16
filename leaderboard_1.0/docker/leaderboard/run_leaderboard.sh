@@ -138,7 +138,7 @@ sleep 5
 
 echo ""
 echo "Validating the Leaderboard results..."
-if grep -wq "global_record\": {}" $AGENT_RESULTS; then
+if ! [ -f $AGENT_RESULTS ] || grep -wq "global_record\": {}" $AGENT_RESULTS; then
     echo "Detected missing global records"
     kill_and_wait_for_simulator crash
     exit 1
