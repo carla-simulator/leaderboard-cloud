@@ -64,7 +64,7 @@ def lambda_handler(event, context):
             "submission_status": str(submission_data.get("status", "")).upper(),
             "track_id": str(event["phase_pk"]),
             "track_codename": phase_data.get("codename", "").rsplit("-", 1)[1],
-            "resume": "",
+            "resume": "1" if str(submission_data.get("status", "")).upper() == "RESUMING" else "",
             "submitted_image_uri": str(event["submitted_image_uri"])
         },
         "aws": {
