@@ -36,7 +36,7 @@ spec:
             - name: RESUME
               value: ""
             - name: S3_BUCKET
-              value: "beta-leaderboard-20"
+              value: "leaderboard-20"
             - name: SUBMISSION_ID
               value: "0"
           volumeMounts:
@@ -287,7 +287,7 @@ spec:
             - name: ROUTES_SUBSET
               value: "15-19"
             - name: ROUTES
-              value: "/workspace/leaderboard/data/routes_testing.xml"
+              value: "/workspace/leaderboard/data/routes_ºing.xml"
             - name: REPETITIONS
               value: "1"
             - name: RESUME
@@ -319,7 +319,7 @@ spec:
               bash /workspace/run_logcopy.sh
           env:
             - name: S3_BUCKET
-              value: "beta-leaderboard-20"
+              value: "leaderboard-20"
             - name: CHALLENGE_ID
               value.$: "768"
             - name: TEAM_ID

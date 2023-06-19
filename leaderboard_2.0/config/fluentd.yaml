@@ -99,11 +99,11 @@ spec:
         image: fluent/fluentd-kubernetes-daemonset:v1.16.1-debian-cloudwatch-1.2
         env:
           - name: K8S_NODE_NAME
-            value: beta-leaderboard-20
+            value: leaderboard-20
           - name: AWS_REGION
             value: us-west-2
           - name: LOG_GROUP_NAME
-            value: leaderboard-20-tests
+            value: leaderboard-20
         resources:
           limits:
             memory: 200Mi

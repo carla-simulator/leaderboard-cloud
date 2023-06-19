@@ -2,7 +2,7 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
-  name: beta-leaderboard-10
+  name: leaderboard-10
   region: us-west-2
   version: "1.24"
 
@@ -64,8 +64,8 @@ iam:
         Resource:
         # All ECR repositories, a specific S3 bucket, and the database
         - "arn:aws:ecr:*:342236305043:repository/*"
-        - "arn:aws:s3:::beta-leaderboard-10*"
-        - "arn:aws:dynamodb:*:342236305043:table/beta-leaderboard-10"
+        - "arn:aws:s3:::leaderboard-10*"
+        - "arn:aws:dynamodb:*:342236305043:table/leaderboard-10"
 
 nodeGroups:
   - name: basic-worker
@@ -85,14 +85,14 @@ nodeGroups:
     volumeSize: 400
     tags:
       k8s.io/cluster-autoscaler/enabled: "true"
-      k8s.io/cluster-autoscaler/beta-leaderboard-10: "owned"
+      k8s.io/cluster-autoscaler/leaderboard-10: "owned"
     labels:
       role: submission-generic-worker
     ssh:
       publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDkL6oBOlOqWp4BgOIsQnHQkaPCEGQjdqwWPy1WXLPEnjMLQ3iFGK+zMJ3VNhYujhemn2Yxja8Yw+a0MWv0OfV9TTcW6gsjsBuZyBA0g7OkaFFrAiEi42gajqqnBCEpbEL8/+MYnOHSYCqIXi7yyzHwDGuUzBsyTTsbAmdvuQ8o7sh7QH0Ncw5Z7605RTQI1MxP2zAQdl/UdZipFH9Q3pCidwWLJ3WFYTvKkhpEjiUyrf2sfPya89yFQdfLytpX4mW/YRsvLIoBElJYDkcAkyGPU6N0o+CoXyFg1ezvB9rXFsW1XgRf4ZR3nKxiM9yi1N1Z0/rf5hUWseNRt6/Xl0pn"
     overrideBootstrapCommand: |
       #!/bin/bash
-      /etc/eks/bootstrap.sh beta-leaderboard-10
+      /etc/eks/bootstrap.sh leaderboard-10
       sudo bash -c "echo 'version = 2
       [plugins]
         [plugins.\"io.containerd.grpc.v1.cri\"]
