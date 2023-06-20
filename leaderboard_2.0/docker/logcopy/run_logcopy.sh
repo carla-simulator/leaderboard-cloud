@@ -15,11 +15,18 @@ EVALAI_RESULTS_FILE="/logs/evalai/results.json"
 EVALAI_STDOUT_FILE="/logs/evalai/stdout.txt"
 EVALAI_METADATA_FILE="/logs/evalai/metadata.json"
 
-UPDATED_DB=false
-
 ###########
 ## UTILS ##
 ###########
+update_database() {
+  START_TIME=$(date +"%Y-%m-%d %T %Z")
+  aws dynamodb update-item \
+    --table-name "$DYNAMODB_TABLE" \
+    --key '{"team_id": {"S": "'"${TEAM_ID}"'" }, "submission_id": {"S": "'"${SUBMISSION_ID}"'"} }' \
+    --update-expression "SET submission_status = :s, results = :r, start_time = :t" \
+    --expression-attribute-values '{":s": {"S": "RUNNING"}, ":r": {"S": "'"s3://${S3_BUCKET}/${SUBMISSION_ID}"'"}, ":t": {"S": "'"${START_TIME}"'"}}'
+}
+
 merge_statistics() {
   python3.7 ${LEADERBOARD_ROOT}/scripts/merge_statistics.py \
     --file-paths /logs/agent/agent{1..4}/agent_results.json \
@@ -64,15 +71,6 @@ update_partial_submission_status() {
         "stderr": "",
         "metadata": '"$METADATA_STR"'}'
   curl --location --request PUT "$ADDR" --header "$HEADER" --header 'Content-Type: application/json' --data-raw "$DATA"
-
-  if [ "$UPDATED_DB" = false ]; then
-    aws dynamodb update-item \
-      --table-name "$DYNAMODB_TABLE" \
-      --key '{"team_id": {"S": "'"${TEAM_ID}"'" }, "submission_id": {"S": "'"${SUBMISSION_ID}"'"} }' \
-      --update-expression "SET submission_status = :s, results = :r" \
-      --expression-attribute-values '{":s": {"S": "RUNNING"}, ":r": {"S": "'"s3://${S3_BUCKET}/${SUBMISSION_ID}"'"}}'
-    UPDATED_DB=true
-  fi
 }
 
 ########################
@@ -83,6 +81,8 @@ update_partial_submission_status() {
 
 # Save all the outpus into a file, which will be sent to s3
 exec > >(tee "$LOGCOPY_LOGS") 2>&1
+
+update_database
 
 while sleep ${LOGS_PERIOD} ; do
   echo ""
