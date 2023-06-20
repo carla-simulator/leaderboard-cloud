@@ -56,6 +56,10 @@ def lambda_handler(event, context):
     submission_data["submission"]["submission_status"] = submission_status
     submission_data["submission"]["end_time"] = f"{datetime.datetime.now().strftime('%Y-%m-%dT%T%Z')}{time.tzname[time.daylight]}"
 
+    if submission_status == "FINISHED":
+        # Extract results
+        submission_status["results"] = json.loads(results)[0]["accuracies"]
+
     evalai_secrets = get_secret(secret_id="evalai")
     manager = urllib3.PoolManager()
     out = json.loads(manager.request(

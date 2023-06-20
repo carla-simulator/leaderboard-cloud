@@ -73,5 +73,6 @@ def lambda_handler(event, context):
         "evalai": {
             "auth_token": evalai_secrets["auth_token"],
             "api_server": evalai_secrets["api_server"]
-        }
+        },
+        "results": {}
     }
