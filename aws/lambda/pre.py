@@ -1,5 +1,7 @@
 import base64
+import datetime
 import json
+import time
 import urllib3
 
 import boto3
@@ -34,20 +36,14 @@ def lambda_handler(event, context):
         url="{0}{1}{2}".format(evalai_secrets["api_server"], "/api/jobs/submission/", event["submission_pk"]),
         headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"])},
     ).data)
-    phase_data = json.loads(manager.request(
-        method="GET",
-        url="{0}{1}{2}".format(evalai_secrets["api_server"], "/api/challenges/challenge/phase/", event["phase_pk"]),
-        headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"])},
-    ).data)
 
-    if phase_data.get("codename", "").startswith("leaderboard-10"):
-        cluster_secrets = get_secret(secret_id="leaderboard-10")
-    else:
-        cluster_secrets = get_secret(secret_id="leaderboard-20")
+    track_secrets = get_secret(secret_id="evalai-tracks")
+    cluster_id, track_codename = track_secrets[event["phase_pk"]].rsplit("-", 1)
+    cluster_secrets = get_secret(secret_id=cluster_id)
 
     return {
         "cluster": {
-            "id": 1 if phase_data.get("codename", "").startswith("leaderboard-10") else 2,
+            "id": cluster_id,
             "name": cluster_secrets["name"],
             "endpoint": cluster_secrets["endpoint"],
             "certificate_authority": cluster_secrets["certificate_authority"],
@@ -63,9 +59,12 @@ def lambda_handler(event, context):
             "team_name": str(submission_data.get("participant_team_name", "")),
             "submission_status": str(submission_data.get("status", "")).upper(),
             "track_id": str(event["phase_pk"]),
-            "track_codename": phase_data.get("codename", "").rsplit("-", 1)[1],
+            "track_codename": track_codename.upper(),
             "resume": "1" if str(submission_data.get("status", "")).upper() == "RESUMING" else "",
-            "submitted_image_uri": str(event["submitted_image_uri"])
+            "submitted_image_uri": str(event["submitted_image_uri"]),
+            "submitted_time": 0,
+            "start_time": f"{datetime.datetime.now().strftime('%Y-%m-%dT%T%Z')}{time.tzname[time.daylight]}",
+            "end_time": "",
         },
         "aws": {
             "s3_bucket": cluster_secrets["s3_bucket"],

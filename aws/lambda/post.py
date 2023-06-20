@@ -1,7 +1,9 @@
 import base64
 import copy
+import datetime
 import json
 import os
+import time
 import urllib3
 
 import boto3
@@ -50,31 +52,26 @@ def lambda_handler(event, context):
     metadata = s3.Object(event["aws"]["s3_bucket"], "{}/evalai/metadata.json".format(event["submission"]["submission_id"]))
     metadata = metadata.get()["Body"].read().decode('utf-8')
 
-    all_submission_data = copy.deepcopy(event)
-    all_submission_data["submission"]["submission_status"] = submission_status
-    all_submission_data["submission"]["result"] = results
-    all_submission_data["submission"]["stdout"] = stdout
-    all_submission_data["submission"]["stderr"] = ""
-    all_submission_data["submission"]["environment_log"] = ""
-    all_submission_data["submission"]["metadata"] = metadata
+    submission_data = copy.deepcopy(event)
+    submission_data["submission"]["submission_status"] = submission_status
+    submission_data["submission"]["end_time"] = f"{datetime.datetime.now().strftime('%Y-%m-%dT%T%Z')}{time.tzname[time.daylight]}"
 
     evalai_secrets = get_secret(secret_id="evalai")
-    
     manager = urllib3.PoolManager()
     out = json.loads(manager.request(
         method="PUT",
         url="{}{}{}{}".format(evalai_secrets["api_server"], "/api/jobs/challenge/", event["submission"]["challenge_id"], "/update_submission/"),
         headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"]), "Content-Type": "application/json"},
         body=json.dumps({
-            "submission": all_submission_data["submission"]["submission_id"],
-            "challenge_phase": all_submission_data["submission"]["track_id"],
-            "submission_status": all_submission_data["submission"]["submission_status"],
-            "result": all_submission_data["submission"]["result"],
-            "stdout": all_submission_data["submission"]["stdout"],
-            "stderr": all_submission_data["submission"]["stderr"],
-            "environment_log": all_submission_data["submission"]["environment_log"],
-            "metadata": all_submission_data["submission"]["metadata"],
+            "submission": submission_data["submission"]["submission_id"],
+            "challenge_phase": submission_data["submission"]["track_id"],
+            "submission_status": submission_data["submission"]["submission_status"],
+            "result": results,
+            "stdout": stdout,
+            "stderr": "",
+            "environment_log": "",
+            "metadata": metadata,
         })
     ).data)
 
-    return all_submission_data
+    return submission_data
