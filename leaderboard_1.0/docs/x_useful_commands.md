@@ -77,6 +77,9 @@ Here is a series of frequent commands used during the cluster development
 # Cluster creation
 eksctl create cluster -f config/leaderboard-cluster.yaml --install-nvidia-plugin=false
 
+# Change context name
+kubectl config rename-context $(kubectl config current-context) l1
+
 # Nvidia Device Plugin
 kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.0/nvidia-device-plugin.yml
 
