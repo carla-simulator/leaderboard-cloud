@@ -321,8 +321,8 @@ spec:
               value.$: $.submission.team_id
             - name: S3_BUCKET
               value.$: "$.aws.s3_bucket"
-            - name: DYNAMODB_TABLE
-              value.$: "$.aws.dynamodb_table"
+            - name: DYNAMODB_SUBMISSIONS_TABLE
+              value.$: "$.aws.dynamodb_submissions_table"
             - name: EVALAI_AUTH_TOKEN
               value.$: "$.evalai.auth_token"
             - name: EVALAI_API_SERVER

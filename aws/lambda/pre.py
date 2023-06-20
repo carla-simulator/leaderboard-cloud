@@ -68,7 +68,8 @@ def lambda_handler(event, context):
         },
         "aws": {
             "s3_bucket": cluster_secrets["s3_bucket"],
-            "dynamodb_table": cluster_secrets["dynamodb_table"]
+            "dynamodb_submissions_table": cluster_secrets["dynamodb_submissions_table"],
+            "dynamodb_results_table": cluster_secrets["dynamodb_results_table"]
         },
         "evalai": {
             "auth_token": evalai_secrets["auth_token"],

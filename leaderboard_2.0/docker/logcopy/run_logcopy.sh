@@ -21,7 +21,7 @@ EVALAI_METADATA_FILE="/logs/evalai/metadata.json"
 update_database() {
   START_TIME=$(date +"%Y-%m-%d %T %Z")
   aws dynamodb update-item \
-    --table-name "$DYNAMODB_TABLE" \
+    --table-name "$DYNAMODB_SUBMISSIONS_TABLE" \
     --key '{"team_id": {"S": "'"${TEAM_ID}"'" }, "submission_id": {"S": "'"${SUBMISSION_ID}"'"} }' \
     --update-expression "SET submission_status = :s, results = :r, start_time = :t" \
     --expression-attribute-values '{":s": {"S": "RUNNING"}, ":r": {"S": "'"s3://${S3_BUCKET}/${SUBMISSION_ID}"'"}, ":t": {"S": "'"${START_TIME}"'"}}'
