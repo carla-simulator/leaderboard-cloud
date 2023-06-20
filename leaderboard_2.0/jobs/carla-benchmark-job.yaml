@@ -24,6 +24,7 @@ spec:
                 echo "Detected a normal run, creating log files"
                 mkdir -m 0777 -p /tmp/logs/agent/agent{1..4}
                 mkdir -m 0777 -p /tmp/logs/simulator
+                mkdir -m 0777 -p /tmp/logs/logcopy
                 mkdir -m 0777 -p /tmp/logs/containers-status
                 mkdir -m 0777 -p /tmp/logs/evalai
               else

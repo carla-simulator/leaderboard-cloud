@@ -7,6 +7,7 @@ export SCENARIO_RUNNER_ROOT="/utils/scenario_runner"
 export LEADERBOARD_ROOT="/utils/leaderboard"
 export PYTHONPATH="${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 
+LOGCOPY_LOGS="/logs/logcopy/logcopy.log"
 LOGCOPY_DONE_FILE="/logs/containers-status/logcopy.done"
 SIMULATION_CANCEL_FILE="/logs/containers-status/simulation.cancel"
 AGENT_RESULTS_FILE="/logs/agent/agent_results.json"
@@ -79,6 +80,9 @@ update_partial_submission_status() {
 ########################
 [[ -z "${LOGS_PERIOD}" ]] && export LOGS_PERIOD="10"
 [ -f $SIMULATION_CANCEL_FILE ] && rm $SIMULATION_CANCEL_FILE
+
+# Save all the outpus into a file, which will be sent to s3
+exec > >(tee "$LOGCOPY_LOGS") 2>&1
 
 while sleep ${LOGS_PERIOD} ; do
   echo ""
