@@ -4,7 +4,7 @@ kind: ClusterConfig
 metadata:
   name: leaderboard-10
   region: us-west-2
-  version: "1.24"
+  version: "1.26"
 
 iamIdentityMappings:
   - arn: arn:aws:iam::342236305043:role/LB2-eks-admin
@@ -78,10 +78,10 @@ nodeGroups:
   - name: submission-worker
     instanceType: g5.12xlarge
     amiFamily: Ubuntu2004
-    ami: ami-05c54e41645c675fe
+    ami: ami-0c49aa9950f7dc0d1
     desiredCapacity: 0
     minSize: 0
-    maxSize: 10
+    maxSize: 2
     volumeSize: 400
     tags:
       k8s.io/cluster-autoscaler/enabled: "true"

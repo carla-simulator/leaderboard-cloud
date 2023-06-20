@@ -78,7 +78,7 @@ Here is a series of frequent commands used during the cluster development
 eksctl create cluster -f config/leaderboard-cluster.yaml --install-nvidia-plugin=false
 
 # Nvidia Device Plugin
-kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.13.0/nvidia-device-plugin.yml
+kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.0/nvidia-device-plugin.yml
 
 # Cluster autoscaler
 kubectl apply -f config/cluster-autoscaler-autodiscover.yaml
