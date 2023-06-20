@@ -15,7 +15,7 @@ eksctl create cluster -f config/leaderboard-cluster.yaml --install-nvidia-plugin
 Adding to the configuration done at the base AMI, for the NVIDIA GPUs to be detected as available resources by the cluster, a plugin needs to be installed. It is publicly available on the NVIDIA repositories. Make sure to install the latest version by checking the [Releases](https://github.com/NVIDIA/k8s-device-plugin/releases) section. In this case:
 
 ```
-kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.13.0/nvidia-device-plugin.yml
+kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.0/nvidia-device-plugin.yml
 ```
 
 This plugin is a DaemonSet, which means that it is a process that Kubernetes will automatically make sure that it is available and running in all instances.
