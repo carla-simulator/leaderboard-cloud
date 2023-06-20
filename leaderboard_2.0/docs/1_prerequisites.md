@@ -76,5 +76,5 @@ eksctl version
 For full disclosure and to avoid possible changes in any of these three tools, here are the versions that were used when creating these docs:
 
 - **AWS CLI**: 2.10.3
-- **eksctl**: 0.130.0
+- **eksctl**: 0.145.0
 - **kubectl**: 1.26
