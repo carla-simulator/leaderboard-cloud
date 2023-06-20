@@ -37,9 +37,9 @@ spec:
             - name: RESUME
               value: ""
             - name: S3_BUCKET
-              value: beta-leaderboard-10
+              value: leaderboard-10
             - name: SUBMISSION_ID
-              value: leaderboard-10-submission-id
+              value: "0"
           volumeMounts:
             - mountPath: /tmp/leaderboard
               name: leaderboard
@@ -312,13 +312,13 @@ spec:
               bash /workspace/run_logcopy.sh
           env:
             - name: S3_BUCKET
-              value: "beta-leaderboard-10"
+              value: "leaderboard-10"
             - name: CHALLENGE_ID
               value.$: "768"
             - name: TEAM_ID
               value.$: "271"
             - name: SUBMISSION_ID
-              value.$: "leaderboard-10-submission-id"
+              value.$: "0"
             - name: TRACK_ID
               value.$: "2118"
           volumeMounts:
