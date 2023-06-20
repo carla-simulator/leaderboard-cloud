@@ -288,7 +288,7 @@ spec:
             - name: ROUTES_SUBSET
               value: "15-19"
             - name: ROUTES
-              value: "/workspace/leaderboard/data/routes_ºing.xml"
+              value: "/workspace/leaderboard/data/routes_testing.xml"
             - name: REPETITIONS
               value: "1"
             - name: RESUME
