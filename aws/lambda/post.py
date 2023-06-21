@@ -58,7 +58,7 @@ def lambda_handler(event, context):
 
     if submission_status == "FINISHED":
         # Extract results
-        submission_status["results"] = {k.replace(" ", "_").lower(): v for k,v in json.loads(results)[0]["accuracies"]}
+        submission_data["results"] = {k.replace(" ", "_").lower(): str(v) for k,v in json.loads(results)[0]["accuracies"].items()}
 
     evalai_secrets = get_secret(secret_id="evalai")
     manager = urllib3.PoolManager()

@@ -33,12 +33,12 @@ def lambda_handler(event, context):
     evalai_secrets = get_secret(secret_id="evalai")
     submission_data = json.loads(manager.request(
         method="GET",
-        url="{0}{1}{2}".format(evalai_secrets["api_server"], "/api/jobs/submission/", event["submission_pk"]),
+        url="{0}{1}{2}".format(evalai_secrets["api_server"], "/api/jobs/submission/", str(event["submission_pk"])),
         headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"])},
     ).data)
 
     track_secrets = get_secret(secret_id="evalai-tracks")
-    cluster_id, track_codename = track_secrets[event["phase_pk"]].rsplit("-", 1)
+    cluster_id, track_codename = track_secrets[str(event["phase_pk"])].rsplit("-", 1)
     cluster_secrets = get_secret(secret_id=cluster_id)
 
     return {
@@ -62,9 +62,9 @@ def lambda_handler(event, context):
             "track_codename": track_codename.upper(),
             "resume": "1" if str(submission_data.get("status", "")).upper() == "RESUMING" else "",
             "submitted_image_uri": str(event["submitted_image_uri"]),
-            "submitted_time": 0,
-            "start_time": f"{datetime.datetime.now().strftime('%Y-%m-%dT%T%Z')}{time.tzname[time.daylight]}",
-            "end_time": "",
+            "submitted_time": f"{datetime.datetime.now().strftime('%Y-%m-%dT%T%Z')}{time.tzname[time.daylight]}",
+            "start_time": "-",
+            "end_time": "-",
         },
         "aws": {
             "s3_bucket": cluster_secrets["s3_bucket"],
