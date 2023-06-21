@@ -58,7 +58,7 @@ def main():
                         "Route deviations": global_records['infractions']['route_dev'],
                         "Route timeouts": global_records['infractions']['route_timeout'],
                         "Agent blocked": global_records['infractions']['vehicle_blocked'],
-                        "Yield emergency vehicle infractions": global_records['infractions']['yield_emergency_vehicles_infractions'],
+                        "Yield emergency vehicle infractions": global_records['infractions']['yield_emergency_vehicle_infractions'],
                         "Scenario timeouts": global_records['infractions']['scenario_timeouts'],
                         "Min speed infractions": global_records['infractions']['min_speed_infractions'],
                     }
