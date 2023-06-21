@@ -31,11 +31,16 @@ def get_secret(secret_id):
 def lambda_handler(event, context):
 
     evalai_secrets = get_secret(secret_id="evalai")
-    submission_data = json.loads(manager.request(
-        method="GET",
-        url="{0}{1}{2}".format(evalai_secrets["api_server"], "/api/jobs/submission/", str(event["submission_pk"])),
-        headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"])},
-    ).data)
+
+    submission_data = {}
+    try:
+        submission_data = json.loads(manager.request(
+            method="GET",
+            url="{0}{1}{2}".format(evalai_secrets["api_server"], "/api/jobs/submission/", str(event["submission_pk"])),
+            headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"])},
+        ).data)
+    except:
+        pass
 
     track_secrets = get_secret(secret_id="evalai-tracks")
     cluster_id, track_codename = track_secrets[str(event["phase_pk"])].rsplit("-", 1)
@@ -57,7 +62,7 @@ def lambda_handler(event, context):
             "submission_id": str(event["submission_pk"]),
             "team_id": str(submission_data.get("participant_team", "")),
             "team_name": str(submission_data.get("participant_team_name", "")),
-            "submission_status": str(submission_data.get("status", "")).upper(),
+            "submission_status": str(submission_data.get("status", "FAILED")).upper(),
             "track_id": str(event["phase_pk"]),
             "track_codename": track_codename.upper(),
             "resume": "1" if str(submission_data.get("status", "")).upper() == "RESUMING" else "",

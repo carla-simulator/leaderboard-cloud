@@ -30,6 +30,13 @@ def get_secret(secret_id):
 
 def lambda_handler(event, context):
  
+    def read_file_from_s3(bucket, file):
+        try:
+            obj = s3.Object(bucket, file)
+            return obj.get()["Body"].read().decode('utf-8')
+        except Exception as e:
+            return ""
+
     s3 = boto3.resource('s3')
     bucket = s3.Bucket(event["aws"]["s3_bucket"])
     objs = list(bucket.objects.filter(Prefix="{}/containers-status".format(event["submission"]["submission_id"])))
@@ -43,39 +50,38 @@ def lambda_handler(event, context):
     else:
         submission_status = "FAILED"
 
-    results = s3.Object(event["aws"]["s3_bucket"], "{}/evalai/results.json".format(event["submission"]["submission_id"]))
-    results = results.get()["Body"].read().decode('utf-8')
-
-    stdout = s3.Object(event["aws"]["s3_bucket"], "{}/evalai/stdout.txt".format(event["submission"]["submission_id"]))
-    stdout = stdout.get()["Body"].read().decode('utf-8')
-
-    metadata = s3.Object(event["aws"]["s3_bucket"], "{}/evalai/metadata.json".format(event["submission"]["submission_id"]))
-    metadata = metadata.get()["Body"].read().decode('utf-8')
-
     submission_data = copy.deepcopy(event)
     submission_data["submission"]["submission_status"] = submission_status
     submission_data["submission"]["end_time"] = f"{datetime.datetime.now().strftime('%Y-%m-%dT%T%Z')}{time.tzname[time.daylight]}"
 
+    results = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/results.json".format(event["submission"]["submission_id"]))
+    stdout = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/stdout.txt".format(event["submission"]["submission_id"]))
+    metadata = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/metadata.json".format(event["submission"]["submission_id"]))
+
     if submission_status == "FINISHED":
         # Extract results
+        assert results is not ""
         submission_data["results"] = {k.replace(" ", "_").lower(): str(v) for k,v in json.loads(results)[0]["accuracies"].items()}
 
     evalai_secrets = get_secret(secret_id="evalai")
     manager = urllib3.PoolManager()
-    out = json.loads(manager.request(
-        method="PUT",
-        url="{}{}{}{}".format(evalai_secrets["api_server"], "/api/jobs/challenge/", event["submission"]["challenge_id"], "/update_submission/"),
-        headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"]), "Content-Type": "application/json"},
-        body=json.dumps({
-            "submission": submission_data["submission"]["submission_id"],
-            "challenge_phase": submission_data["submission"]["track_id"],
-            "submission_status": submission_data["submission"]["submission_status"],
-            "result": results,
-            "stdout": stdout,
-            "stderr": "",
-            "environment_log": "",
-            "metadata": metadata,
-        })
-    ).data)
+    try:
+        out = json.loads(manager.request(
+            method="PUT",
+            url="{}{}{}{}".format(evalai_secrets["api_server"], "/api/jobs/challenge/", event["submission"]["challenge_id"], "/update_submission/"),
+            headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"]), "Content-Type": "application/json"},
+            body=json.dumps({
+                "submission": submission_data["submission"]["submission_id"],
+                "challenge_phase": submission_data["submission"]["track_id"],
+                "submission_status": submission_data["submission"]["submission_status"],
+                "result": results,
+                "stdout": stdout,
+                "stderr": "",
+                "environment_log": "",
+                "metadata": metadata,
+            })
+        ).data)
+    except:
+        pass
 
     return submission_data
