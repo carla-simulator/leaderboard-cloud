@@ -4,7 +4,7 @@ kind: ClusterConfig
 metadata:
   name: leaderboard-10
   region: us-west-2
-  version: "1.26"
+  version: "1.24"
 
 iamIdentityMappings:
   - arn: arn:aws:iam::342236305043:role/LB2-eks-admin
@@ -65,7 +65,7 @@ iam:
         # All ECR repositories, a specific S3 bucket, and the database
         - "arn:aws:ecr:*:342236305043:repository/*"
         - "arn:aws:s3:::leaderboard-10*"
-        - "arn:aws:dynamodb:*:342236305043:table/leaderboard-10"
+        - "arn:aws:dynamodb:*:342236305043:table/leaderboard-10-submissions"
 
 nodeGroups:
   - name: basic-worker
@@ -78,7 +78,7 @@ nodeGroups:
   - name: submission-worker
     instanceType: g5.12xlarge
     amiFamily: Ubuntu2004
-    ami: ami-0c49aa9950f7dc0d1
+    ami: ami-05c54e41645c675fe
     desiredCapacity: 0
     minSize: 0
     maxSize: 2
