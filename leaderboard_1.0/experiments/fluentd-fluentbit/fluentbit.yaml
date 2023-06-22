@@ -35,7 +35,7 @@ data:
     [OUTPUT]
         Name                cloudwatch_logs
         Match               kube.*
-        region              us-west-2
+        region              us-east-1
         log_group_name      leaderboard-20-tests
         log_stream_prefix   test1-
         auto_create_group   Off
@@ -110,7 +110,7 @@ spec:
           - name: CLUSTER-NAME
             value: beta-leaderboard-10
           - name: AWS_REGION
-            value: us-west-2
+            value: us-east-1
         resources:
           limits:
             memory: 200Mi

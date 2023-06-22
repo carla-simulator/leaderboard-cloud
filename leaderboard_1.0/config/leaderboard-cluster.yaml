@@ -3,7 +3,7 @@ kind: ClusterConfig
 
 metadata:
   name: leaderboard-10
-  region: us-west-2
+  region: us-east-1
   version: "1.24"
 
 iamIdentityMappings:
