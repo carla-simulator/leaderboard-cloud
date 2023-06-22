@@ -67,7 +67,7 @@ def lambda_handler(event, context):
             "track_codename": track_codename.upper(),
             "resume": "1" if str(submission_data.get("status", "")).upper() == "RESUMING" else "",
             "submitted_image_uri": str(event["submitted_image_uri"]),
-            "submitted_time": f"{datetime.datetime.now().strftime('%Y-%m-%dT%T%Z')}{time.tzname[time.daylight]}",
+            "submitted_time": f"{datetime.datetime.now().strftime('%Y-%m-%d %T%Z')} {time.tzname[time.daylight]}",
             "start_time": "-",
             "end_time": "-",
         },
