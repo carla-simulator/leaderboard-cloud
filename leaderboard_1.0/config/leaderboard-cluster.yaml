@@ -65,7 +65,7 @@ iam:
         # All ECR repositories, a specific S3 bucket, and the database
         - "arn:aws:ecr:*:342236305043:repository/*"
         - "arn:aws:s3:::leaderboard-10*"
-        - "arn:aws:dynamodb:*:342236305043:table/leaderboard-10-submissions"
+        - "arn:aws:dynamodb:*:342236305043:table/leaderboard-10"
 
 nodeGroups:
   - name: basic-worker
