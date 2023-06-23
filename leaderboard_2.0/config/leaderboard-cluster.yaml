@@ -78,7 +78,7 @@ nodeGroups:
   - name: submission-worker
     instanceType: g5.12xlarge
     amiFamily: Ubuntu2004
-    ami: ami-05c54e41645c675fe
+    ami: ami-0c01446f58e4a1729
     desiredCapacity: 0
     minSize: 0
     maxSize: 4
@@ -89,7 +89,7 @@ nodeGroups:
     labels:
       role: submission-generic-worker
     ssh:
-      publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDkL6oBOlOqWp4BgOIsQnHQkaPCEGQjdqwWPy1WXLPEnjMLQ3iFGK+zMJ3VNhYujhemn2Yxja8Yw+a0MWv0OfV9TTcW6gsjsBuZyBA0g7OkaFFrAiEi42gajqqnBCEpbEL8/+MYnOHSYCqIXi7yyzHwDGuUzBsyTTsbAmdvuQ8o7sh7QH0Ncw5Z7605RTQI1MxP2zAQdl/UdZipFH9Q3pCidwWLJ3WFYTvKkhpEjiUyrf2sfPya89yFQdfLytpX4mW/YRsvLIoBElJYDkcAkyGPU6N0o+CoXyFg1ezvB9rXFsW1XgRf4ZR3nKxiM9yi1N1Z0/rf5hUWseNRt6/Xl0pn"
+      publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCZQX1BLF+9BZcYTb3yVwHZYToOPkeg6j/Rwq9PiiciCFJ/P23ZX7DZLpdIPUICovYcHA7j/0PNBss9paqLSsjtV8q6wxLPDQWp5nu4IJhDb5G6rAZ3wEgIsnmrLqSVY51uIThBcrvBkx96rmR2cbTisQvoTbJiJDwYbl2vqIJbdbDilv3c7xIfdt1FbRDtk9pb9svOJXCoKND/d+Y1LH2Im8Iwg3BnZ4INvOYjLEcm4RkZ4ICikczhfjY/pMaiCOufSVh7qGNruZEsZsI4u6XecNgDAx8jWysYFgEsfuxn324DdI/YT5DIBtHegerVSd1rL58vJLejvRcM1jCmZK4B"
     overrideBootstrapCommand: |
       #!/bin/bash
       /etc/eks/bootstrap.sh leaderboard-20
