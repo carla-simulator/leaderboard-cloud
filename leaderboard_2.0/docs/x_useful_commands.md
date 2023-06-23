@@ -93,5 +93,5 @@ kubectl apply -f jobs/carla-benchmark-job.yaml
 # Cluster deletion
 kubectl delete -f config/fluentd.yaml
 kubectl delete -f jobs/carla-benchmark-job.yaml
-eksctl delete cluster --region=us-east-1 --name=beta-leaderboard-20
+eksctl delete cluster --region=us-west-2 --name=beta-leaderboard-20
 ```

@@ -10,26 +10,26 @@ spec:
         node.kubernetes.io/instance-type: g5.4xlarge
       initContainers:
         - name: leaderboard-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-testing:latest
           command: [ "sh", "-c", "cp -r /workspace/leaderboard/* /tmp/leaderboard-master/"]
           volumeMounts:
             - mountPath: /tmp/leaderboard-master
               name: leaderboard-master
         - name: scenario-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-testing:latest
           command: [ "sh", "-c", "cp -r /workspace/scenario_runner/* /tmp/scenario-runner-master/"]
           volumeMounts:
             - mountPath: /tmp/scenario-runner-master
               name: scenario-runner-master
         - name: carla-root-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-testing:latest
           command: [ "sh", "-c", "cp -r /workspace/CARLA/* /tmp/carla-root-master/"]
           volumeMounts:
             - mountPath: /tmp/carla-root-master
               name: carla-root-master
       containers:
         - name: simulator
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-simulator-testing:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -56,7 +56,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
           command: ["/bin/bash", "-c"]
           args:
             - |

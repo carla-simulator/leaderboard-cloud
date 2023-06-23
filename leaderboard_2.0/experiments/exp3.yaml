@@ -10,19 +10,19 @@ spec:
         node.kubernetes.io/instance-type: g5.12xlarge
       initContainers:
         - name: leaderboard-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-development:latest
           command: [ "sh", "-c", "cp -r /workspace/leaderboard/* /tmp/leaderboard-master/"]
           volumeMounts:
             - mountPath: /tmp/leaderboard-master
               name: leaderboard-master
         - name: scenario-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-development:latest
           command: [ "sh", "-c", "cp -r /workspace/scenario_runner/* /tmp/scenario-runner-master/"]
           volumeMounts:
             - mountPath: /tmp/scenario-runner-master
               name: scenario-runner-master
         - name: carla-root-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-development:latest
           command: [ "sh", "-c", "cp -r /workspace/CARLA/* /tmp/carla-root-master/"]
           volumeMounts:
             - mountPath: /tmp/carla-root-master
@@ -30,7 +30,7 @@ spec:
       containers:
         # First set of simulator + agent
         - name: simulator-1
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-development:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-simulator-development:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -63,7 +63,7 @@ spec:
               #cpu: 12.0  # 1000m is equal to 1 VCPU core
               #cpu: "12000m"  # 1000m is equal to 1 VCPU core
         - name: agent-1
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -144,7 +144,7 @@ spec:
               #cpu: 12.0  # 1000m is equal to 1 VCPU core
         # Second set of simulator + agent
         - name: simulator-2
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-development:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-simulator-development:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -176,7 +176,7 @@ spec:
               nvidia.com/gpu: 1
               #cpu: 12.0  # 1000m is equal to 1 VCPU core
         - name: agent-2
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -257,7 +257,7 @@ spec:
               #cpu: 11  # 1000m is equal to 1 VCPU core
         # Third set of simulator + agent
         - name: simulator-3
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-development:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-simulator-development:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -289,7 +289,7 @@ spec:
               nvidia.com/gpu: 1
               #cpu: 12.0  # 1000m is equal to 1 VCPU core
         - name: agent-3
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -370,7 +370,7 @@ spec:
               #cpu: 11  # 1000m is equal to 1 VCPU core
         # Four set of simulator + agent
         - name: simulator-4
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-development:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-simulator-development:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -402,7 +402,7 @@ spec:
               nvidia.com/gpu: 1
               #cpu: 12.0  # 1000m is equal to 1 VCPU core
         - name: agent-4
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
           command: ["/bin/bash", "-c"]
           args:
             - |
