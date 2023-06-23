@@ -134,4 +134,4 @@ Lastly, the `overrideBootstrapCommand` and `preBootstrapCommands` are a list of 
       - "sudo X :0&"
 ```
 
-
+To get the publick key: `ssh-keygen -y -f carla-leaderboard-20.pem`
