@@ -10,7 +10,7 @@ spec:
     node.kubernetes.io/instance-type: g5.4xlarge
   containers:
     - name: simulator
-      image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+      image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-simulator-testing:latest
       command: ["/bin/bash", "-c"]
       args:
         - |

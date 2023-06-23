@@ -10,26 +10,26 @@ spec:
         node.kubernetes.io/instance-type: g5.12xlarge
       initContainers:
         - name: leaderboard-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-testing
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-testing
           command: [ "sh", "-c", "cp -r /workspace/leaderboard/* /tmp/leaderboard-master/"]
           volumeMounts:
             - mountPath: /tmp/leaderboard-master
               name: leaderboard-master
         - name: scenario-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-testing
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-testing
           command: [ "sh", "-c", "cp -r /workspace/scenario_runner/* /tmp/scenario-runner-master/"]
           volumeMounts:
             - mountPath: /tmp/scenario-runner-master
               name: scenario-runner-master
         - name: carla-root-copy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-testing
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-testing
           command: [ "sh", "-c", "cp -r /workspace/CARLA/* /tmp/carla-root-master/"]
           volumeMounts:
             - mountPath: /tmp/carla-root-master
               name: carla-root-master
       containers:
         - name: simulator-1
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -52,7 +52,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-1
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-72e0bac2-team-177:19f6c555-b404-4d3f-b1f2-1b61be797aa7
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-72e0bac2-team-177:19f6c555-b404-4d3f-b1f2-1b61be797aa7
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -128,7 +128,7 @@ spec:
             - name: RESUME
               value: ""
         - name: simulator-2
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -151,7 +151,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-2
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-72e0bac2-team-177:19f6c555-b404-4d3f-b1f2-1b61be797aa7
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-72e0bac2-team-177:19f6c555-b404-4d3f-b1f2-1b61be797aa7
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -227,7 +227,7 @@ spec:
             - name: RESUME
               value: ""
         - name: simulator-3
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -250,7 +250,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-3
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-72e0bac2-team-177:19f6c555-b404-4d3f-b1f2-1b61be797aa7
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-72e0bac2-team-177:19f6c555-b404-4d3f-b1f2-1b61be797aa7
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -326,7 +326,7 @@ spec:
             - name: RESUME
               value: ""
         - name: simulator-4
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -349,7 +349,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-4
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-72e0bac2-team-177:19f6c555-b404-4d3f-b1f2-1b61be797aa7
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-72e0bac2-team-177:19f6c555-b404-4d3f-b1f2-1b61be797aa7
           command: ["/bin/bash", "-c"]
           args:
             - |

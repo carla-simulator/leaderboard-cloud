@@ -18,15 +18,15 @@ cat > .aws/credentials << EOF
 aws_access_key_id = xxx
 aws_secret_access_key = xxx
 EOF
-sudo $(aws ecr get-login --no-include-email --region us-east-1)
+sudo $(aws ecr get-login --no-include-email --region us-west-2)
 
 # 3) Download the dockers
-sudo docker pull 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator
-sudo docker pull 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20
+sudo docker pull 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-simulator
+sudo docker pull 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20
 
 # 4) Copy the LB and SR parts out of the dockers
 
-sudo docker run -it --rm --volume=/tmp:/tmp:rw 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20 /bin/bash
+sudo docker run -it --rm --volume=/tmp:/tmp:rw 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20 /bin/bash
 sudo docker ps
 export CONTAINER_ID=<container-id>
 sudo docker cp $CONTAINER_ID:/workspace/scenario_runner/ /tmp/scenario-runner-master/
@@ -41,10 +41,10 @@ sudo docker run -it --rm --net=host --runtime=nvidia \
  -v /tmp/.X11-unix:/tmp/.X11-unix \
  -v $XAUTHORITY:$XAUTHORITY \
  --gpus=all \
- 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator ./CarlaUE4.sh --vulkan -RenderOffScreen
+ 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-simulator ./CarlaUE4.sh --vulkan -RenderOffScreen
 
 # 6) Download and run the agent (using a LB 2.0 submitted agent as the test)
-export AGENT_IMAGE=342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
+export AGENT_IMAGE=342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-586a194d-team-177:54a1db1b-d340-4de8-a25b-67aa756db0c6
 sudo docker pull $AGENT_IMAGE
 
 sudo docker run -it --rm --net=host --runtime=nvidia --gpus all \

@@ -21,9 +21,9 @@ docker build --force-rm -t carla_dev -f Dockerfile .
 Push the Docker with 
 
 ```bash
-$(aws ecr get-login --no-include-email --region us-east-1)
-docker tag carla_dev:latest 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-development:latest
-docker push 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-development:latest
+$(aws ecr get-login --no-include-email --region us-west-2)
+docker tag carla_dev:latest 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-simulator-development:latest
+docker push 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-simulator-development:latest
 ```
 
 ## Create the Leaderboard Docker
@@ -39,9 +39,9 @@ bash ~/carla-challenge-contents/src/leaderboard_20/make_docker_leaderboard.sh
 Then, push it with 
 
 ```bash
-$(aws ecr get-login --no-include-email --region us-east-1)
-docker tag leaderboard-master-development:latest 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
-docker push 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-development:latest
+$(aws ecr get-login --no-include-email --region us-west-2)
+docker tag leaderboard-master-development:latest 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-development:latest
+docker push 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-development:latest
 ```
 
 # Create the Testing Setup
@@ -67,9 +67,9 @@ docker build --force-rm -t carla_test -f Dockerfile .
 Push the Docker with 
 
 ```bash
-$(aws ecr get-login --no-include-email --region us-east-1)
-docker tag carla_test:latest 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
-docker push 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-simulator-testing:latest
+$(aws ecr get-login --no-include-email --region us-west-2)
+docker tag carla_test:latest 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-simulator-testing:latest
+docker push 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-simulator-testing:latest
 ```
 
 ## Create the Leaderboard Docker
@@ -85,7 +85,7 @@ bash ~/carla-challenge-contents/src/leaderboard_20/make_docker_leaderboard.sh
 Then, push it with 
 
 ```bash
-$(aws ecr get-login --no-include-email --region us-east-1)
-docker tag leaderboard-master-testing:latest 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
-docker push 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-20-testing:latest
+$(aws ecr get-login --no-include-email --region us-west-2)
+docker tag leaderboard-master-testing:latest 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-testing:latest
+docker push 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-testing:latest
 ```

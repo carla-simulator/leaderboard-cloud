@@ -12,7 +12,7 @@ spec:
 
       initContainers:
         - name: private-contents
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-testing
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-testing
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -53,7 +53,7 @@ spec:
       containers:
         # First set of simulator + agent
         - name: simulator-1
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -76,7 +76,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-1
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-72e0bac2-team-177:44d4c9b5-8015-4b97-8a33-7dd160fc5722
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-72e0bac2-team-177:44d4c9b5-8015-4b97-8a33-7dd160fc5722
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -116,7 +116,7 @@ spec:
 
         # Second set of simulator + agent
         - name: simulator-2
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -139,7 +139,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-2
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-72e0bac2-team-177:44d4c9b5-8015-4b97-8a33-7dd160fc5722
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-72e0bac2-team-177:44d4c9b5-8015-4b97-8a33-7dd160fc5722
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -179,7 +179,7 @@ spec:
 
         # Third set of simulator + agent
         - name: simulator-3
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -202,7 +202,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-3
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-72e0bac2-team-177:44d4c9b5-8015-4b97-8a33-7dd160fc5722
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-72e0bac2-team-177:44d4c9b5-8015-4b97-8a33-7dd160fc5722
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -242,7 +242,7 @@ spec:
 
         # Four set of simulator + agent
         - name: simulator-4
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/challenge-simulator:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/challenge-simulator:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -265,7 +265,7 @@ spec:
             limits:
               nvidia.com/gpu: 1
         - name: agent-4
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/bm-72e0bac2-team-177:44d4c9b5-8015-4b97-8a33-7dd160fc5722
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-72e0bac2-team-177:44d4c9b5-8015-4b97-8a33-7dd160fc5722
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -305,7 +305,7 @@ spec:
 
         # Log copy container
         - name: logcopy
-          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/leaderboard-10-logcopy:latest
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-10-logcopy:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
