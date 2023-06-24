@@ -52,7 +52,7 @@ def lambda_handler(event, context):
 
     submission_data = copy.deepcopy(event)
     submission_data["submission"]["submission_status"] = submission_status
-    submission_data["submission"]["end_time"] = f"{datetime.datetime.now().strftime('%Y-%m-%dT%T%Z')}{time.tzname[time.daylight]}"
+    submission_data["submission"]["end_time"] = f"{datetime.datetime.now().strftime('%Y-%m-%d %T%Z')} {time.tzname[time.daylight]}",
 
     results = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/results.json".format(event["submission"]["submission_id"]))
     stdout = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/stdout.txt".format(event["submission"]["submission_id"]))
