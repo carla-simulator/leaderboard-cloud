@@ -9,8 +9,6 @@ The default target name is "leaderboard-10"
 
 The following env variables are mandatory:
   * CARLA_ROOT
-  * LEADERBOARD_ROOT
-  * SCENARIO_RUNNER_ROOT
   * CHALLENGE_CONTENTS_ROOT
 END
 )
@@ -40,16 +38,7 @@ then
     echo "Error $CARLA_ROOT is empty. Set \$CARLA_ROOT as an environment variable first."
     exit 1
 fi
-
-if [ -z "$SCENARIO_RUNNER_ROOT" ]
-then echo "Error $SCENARIO_RUNNER_ROOT is empty. Set \$SCENARIO_RUNNER_ROOT as an environment variable first."
-    exit 1
-fi
-
-if [ -z "$LEADERBOARD_ROOT" ]
-then echo "Error $LEADERBOARD_ROOT is empty. Set \$LEADERBOARD_ROOT as an environment variable first."
-    exit 1
-fi
+echo "Using the CARLA version at '$CARLA_ROOT'"
 
 if [ -z "$CHALLENGE_CONTENTS_ROOT" ]
 then echo "Error $CHALLENGE_CONTENTS_ROOT is empty. Set \$CHALLENGE_CONTENTS_ROOT as an environment variable first."
@@ -66,11 +55,11 @@ mv .lbtmp/PythonAPI/carla/dist/carla*-py2*.egg .lbtmp/PythonAPI/carla/dist/carla
 mv .lbtmp/PythonAPI/carla/dist/carla*-py3*.egg .lbtmp/PythonAPI/carla/dist/carla-leaderboard-py3x.egg
 
 echo "Copying Scenario Runner"
-cp -fr ${SCENARIO_RUNNER_ROOT}/ .lbtmp
+cp -fr ${SCRIPT_DIR}/submodules/scenario_runner .lbtmp
 rm -fr .lbtmp/scenario_runner/.git
 
 echo "Copying Leaderboard"
-cp -fr ${LEADERBOARD_ROOT}/ .lbtmp
+cp -fr ${SCRIPT_DIR}/submodules/leaderboard .lbtmp
 rm -fr .lbtmp/leaderboard/.git
 
 echo "Copying CARLA's private data"
