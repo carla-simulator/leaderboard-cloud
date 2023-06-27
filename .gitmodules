@@ -1,0 +1,12 @@
+[submodule "leaderboard_1.0/docker/leaderboard/scenario_runner"]
+	path = leaderboard_1.0/docker/leaderboard/scenario_runner
+	url = https://github.com/carla-simulator/scenario_runner.git
+[submodule "leaderboard_1.0/docker/leaderboard/leaderboard"]
+	path = leaderboard_1.0/docker/leaderboard/leaderboard
+	url = https://github.com/carla-simulator/leaderboard.git
+[submodule "leaderboard_2.0/docker/leaderboard/scenario_runner"]
+	path = leaderboard_2.0/docker/leaderboard/scenario_runner
+	url = https://github.com/carla-simulator/scenario_runner.git
+[submodule "leaderboard_2.0/docker/leaderboard/leaderboard"]
+	path = leaderboard_2.0/docker/leaderboard/leaderboard
+	url = https://github.com/carla-simulator/leaderboard.git
