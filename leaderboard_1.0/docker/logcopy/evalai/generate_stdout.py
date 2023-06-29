@@ -45,7 +45,7 @@ def main():
         else:
             sensors[pretty_sensor] = 1
     for sensor_type, sensor_number in sensors.items():
-        pretty_output += f"  - {sensor_number} {sensor_type}\n"
+        pretty_output += f"  · {sensor_number} {sensor_type}\n"
 
     # Completed routes
     completed_routes, total_routes = data['_checkpoint']['progress']
@@ -74,6 +74,23 @@ def main():
     ratio = 0 if total_duration_system == 0 else total_duration_game / total_duration_system
     pretty_output += f"- Submission ratio of {ratio}x\n"
     pretty_output += f"- Submission FPS of {20*ratio}\n"
+
+    global_record = data['_checkpoint']['global_record']
+    if global_record:
+        pretty_output += f"- Results:\n"
+        pretty_output += f"  · Driving score: {global_record['scores']['score_composed']}\n"
+        pretty_output += f"  · Route completion: {global_record['scores']['score_route']}\n"
+        pretty_output += f"  · Infraction penalty: {global_record['scores']['score_penalty']}\n"
+        pretty_output += f"  · Collisions pedestrians: {global_record['infractions']['collisions_pedestrian']}\n"
+        pretty_output += f"  · Collisions vehicles: {global_record['infractions']['collisions_vehicle']}\n"
+        pretty_output += f"  · Collisions layout: {global_record['infractions']['collisions_layout']}\n"
+        pretty_output += f"  · Red light infractions: {global_record['infractions']['red_light']}\n"
+        pretty_output += f"  · Stop sign infractions: {global_record['infractions']['stop_infraction']}\n"
+        pretty_output += f"  · Off-road infractions:{global_record['infractions']['outside_route_lanes']}\n"
+        pretty_output += f"  · Route deviations: {global_record['infractions']['route_dev']}\n"
+        pretty_output += f"  · Route timeouts: {global_record['infractions']['route_timeout']}\n"
+        pretty_output += f"  · Agent blocked: {global_record['infractions']['vehicle_blocked']}\n"
+
     pretty_output += "\n"
 
     # Route data
