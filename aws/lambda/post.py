@@ -66,22 +66,35 @@ def lambda_handler(event, context):
     evalai_secrets = get_secret(secret_id="evalai")
     manager = urllib3.PoolManager()
     try:
-        out = json.loads(manager.request(
-            method="PUT",
-            url="{}{}{}{}".format(evalai_secrets["api_server"], "/api/jobs/challenge/", event["submission"]["challenge_id"], "/update_submission/"),
-            headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"]), "Content-Type": "application/json"},
-            body=json.dumps({
-                "submission": submission_data["submission"]["submission_id"],
-                "challenge_phase": submission_data["submission"]["track_id"],
-                "submission_status": submission_data["submission"]["submission_status"],
-                "result": results,
-                "stdout": stdout,
-                "stderr": "",
-                "environment_log": "",
-                "metadata": metadata,
-            })
-        ).data)
-        print(out)
+        evalai_status = ""
+        retries, MAX_RETRIES = 0, 5
+        while submission_status != evalai_status and retries < MAX_RETRIES:
+            out = json.loads(manager.request(
+                method="PUT",
+                url="{}{}{}{}".format(evalai_secrets["api_server"], "/api/jobs/challenge/", event["submission"]["challenge_id"], "/update_submission/"),
+                headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"]), "Content-Type": "application/json"},
+                body=json.dumps({
+                    "submission": submission_data["submission"]["submission_id"],
+                    "challenge_phase": submission_data["submission"]["track_id"],
+                    "submission_status": submission_data["submission"]["submission_status"],
+                    "result": results,
+                    "stdout": stdout,
+                    "stderr": "",
+                    "environment_log": "",
+                    "metadata": metadata,
+                })
+            ).data)
+            print(out)
+
+            evalai_status = json.loads(manager.request(
+                method="GET",
+                url="{0}{1}{2}".format(evalai_secrets["api_server"], "/api/jobs/submission/", event["submission"]["submission_id"]),
+                headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"])},
+            ).data).get("status", "").upper()
+            retries += 1
+
+            print(submission_status, evalai_status)
+
     except:
         pass
 
