@@ -2,9 +2,9 @@
 
 Before starting with the infraestructure itself, let's take a look at what tools will be used to create it, which are mainly three.
 
-### AWS CLI
+### AWS Interface and CLI
 
-In order to run the cloud infraestructure, the AWS services will be used. As such, users are expected to already have an AWS account available for them to use. 
+In order to run the cloud infraestructure, the AWS services will be used. As such, users are expected to already have an AWS account available for them to use.
 
 Additionally, it is also recommended to install and configure the AWS CLI to target the desired account. Run the following commands to install AWS CLI:
 
@@ -18,7 +18,7 @@ sudo ./aws/install
 
 After the installation, configure AWS CLI to point to your account 
 
-```
+```bash
 aws configure
 ```
 
@@ -39,9 +39,9 @@ Check that the AWS CLI has been properly installed by checking its version with:
 aws --version
 ```
 
-### kubectl 
+### kubectl
 
-The next tool that will be used is Kubernetes, which will greatly smooth the creation of the cluster the CARLA Leaderboard runs in. To use it, install kubectl, which is the CLI tool used to interact with the Kubernetes cluster.
+The next tool that will be used is Kubernetes, which will greatly smooth the creation and management of the CARLA Leaderboard cluster. To use it, install kubectl, which is the CLI tool used to interact with the Kubernetes cluster.
 
 ```bash
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -57,7 +57,7 @@ kubectl version --client --output=yaml
 
 ### eksctl
 
-Lastly, AWS EKS will be used, which is the official tool provided by AWS to manage Kubernetes clusters inside the users' account. And as expected, AWS EKS has its own CLI, which can be install with
+Lastly, AWS EKS will be used, which is the official tool provided by AWS to manage Kubernetes clusters inside the user's account. And as expected, AWS EKS has its own CLI, which can be install with
 
 ```bash
 curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
@@ -77,4 +77,4 @@ For full disclosure and to avoid possible changes in any of these three tools, h
 
 - **AWS CLI**: 2.10.3
 - **eksctl**: 0.145.0
-- **kubectl**: 1.26
+- **kubectl**: 1.24
