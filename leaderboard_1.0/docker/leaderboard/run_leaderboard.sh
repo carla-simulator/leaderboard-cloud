@@ -88,6 +88,12 @@ kill_and_wait_for_simulator () {
     fi
 }
 
+echo "Sourcing '${HOME}/agent_sources.sh'"
+source ${HOME}/.bashrc
+if [[ -f "${HOME}/agent_sources.sh" ]]; then
+  source ${HOME}/agent_sources.sh
+fi
+
 echo ""
 echo "Sleeping a bit to ensure CARLA is ready"
 sleep 60
