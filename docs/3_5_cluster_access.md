@@ -45,10 +45,10 @@ This creates a new profile called `eks-admin` with the previously created `LB2-e
 Now, update the kubectl configuration with the cluster's information:
 ```bash
 # Link kubectl with the Leaderboard 1.0 cluster
-aws eks update-kubeconfig --region us-west-2 --name leaderboard-10
+aws eks update-kubeconfig --region us-west-2 --name leaderboard-10 --alias l1
 
 # Link kubectl with the Leaderboard 2.0 cluster
-aws eks update-kubeconfig --region us-west-2 --name leaderboard-20
+aws eks update-kubeconfig --region us-west-2 --name leaderboard-20 --alias l2
 ```
 
 With that, navigate to `~/.kube/config`, where you can see all the clusters, contexts and users available. The last step is to specify that these clusters will be using the `eks-admin` profile, instead of the default one, so manually add them to the each of the users. It should result in something like this:
@@ -64,7 +64,7 @@ With that, navigate to `~/.kube/config`, where you can see all the clusters, con
       - get-token
       - --cluster-name
       - leaderboard-10
-      - profile                         # Add these two lines
+      - --profile                         # Add these two lines
       - eks-admin                       # onto each user
       command: aws
 ```
@@ -72,10 +72,10 @@ With that, navigate to `~/.kube/config`, where you can see all the clusters, con
 Switch to the cluster by using the command
 ```bash
 # Switch to the Leaderboard 1.0 cluster
-kubectl config use-context leaderboard-10
+kubectl config use-context l1
 
 # Switch to the Leaderboard 2.0 cluster
-kubectl config use-context leaderboard-20
+kubectl config use-context l2
 ```
 
 _NOTE: If this process has to be repeated once again due to, for example, the deletion of the cluster during testing, repeat these instructions skipping the creation of the `eks-admin` profile.
