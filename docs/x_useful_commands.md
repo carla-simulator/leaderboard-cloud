@@ -1,97 +1,77 @@
 # Useful commands
 
-Here is a recollection of some useful commands to be used
+This section is a recollection of the commands that are the most used during testing. This helps the testing by having a centralized location were the common commands are available for copying.
 
-### EKSCTL
+# Cluster creation and deletion
 
+To create the cluster, follow these commands:
 ```bash
-"""
-General
-"""
-eksctl create cluster -f <YAML-FILE> --install-nvidia-plugin=false
-eksctl delete cluster --region=<CLUSTER-REGION> --name=<CLUSTER-NAME>
-
-# As an example
+# Create the cluster 
 eksctl create cluster -f config/leaderboard-cluster.yaml --install-nvidia-plugin=false
-eksctl delete cluster --region=us-east-2 --name=beta-leaderboard-20
+kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.0/nvidia-device-plugin.yml
+kubectl apply -f config/cluster-autoscaler-autodiscover.yaml
+kubectl apply -f config/fluentd.yaml
 ```
 
-### Kubectl
-
+And to delete it, choose on the two options below
 ```bash
-"""
-General
-"""
+# Delete the Leaderboard 1.0 cluster
+eksctl delete cluster --region=us-west-1 --name=leaderboard-10
+# Delete the Leaderboard 2.0 cluster
+eksctl delete cluster --region=us-west-1 --name=leaderboard-20
+```
+
+# Cluster access
+
+Below are the commands used when users want to have access to specific clusters
+```bash
+# Accessing the Leaderboard 1.0 cluster (for the 2nd time)
+aws eks update-kubeconfig --region us-west-2 --name leaderboard-10 --alias l1
+kubectl config use-context l1
+# Accessing the Leaderboard 2.0 cluster (for the 2nd time)
+aws eks update-kubeconfig --region us-west-2 --name leaderboard-20 --alias l2
+kubectl config use-context l2
+
+# Changing the alias (for the cluster creator only)
+kubectl config rename-context $(kubectl config current-context) l2
+```
+
+# kubectl
+
+For interaction with the cluster, create and delete elements with
+```bash
 kubectl apply -f <YAML-FILE>
 kubectl delete -f <YAML-FILE>
-
-"""
-Nodes
-"""
-kubectl get nodes -o wide
-kubectl describe node <NODE-NAME>
-
-"""
-Pods
-"""
-kubectl get pods -o wide -n <NAMESPACE>
-kubectl logs -n <NAMESPACE> <POD-NAME>
-kubectl exec -n <NAMESPACE> -it <POD-NAME> -- <COMMAND>
 ```
 
-### Instance
-
+Get a table with some of the cluster elements
 ```bash
-"""
-SSH
-"""
-ssh -i <private-key> ubuntu@<public-ip>
-
-"""
-Instance commands
-"""
-# Get the kubelet status and logs
-systemctl status kubelet
-journalctl -xe --unit kubelet
-
-# Get the containerd status, logs and configuration
-systemctl status containerd
-journalctl -xe --unit containerd
-containerd config dump
+kubectl get pods,nodes -n <NAMESPACE>
 ```
 
-### AWS
-
-Delete AMI:
-1. Go to `EC2`, and then `AMIs`.
-1. Right click on the AMI and select `Deregister AMI`
-1. Remember the linked Snapshot ID shown when deregistering, and go `Snapshots`.
-1. Right click on the Snapshot and select `Delect snapshot`
+The most common elements to search for are *pods*, *nodes*, *jobs*, *sa* (service accounts).
 
 
-### Common cluster commands
-
-Here is a series of frequent commands used during the cluster development
-
+To get more information about an element
 ```bash
-# Cluster creation
-eksctl create cluster -f config/leaderboard-cluster.yaml --install-nvidia-plugin=false
+# Describe it
+kubectl describe <type/NAME> -n <NAMESPACE>       # For example 'kubectl describe pod/submission-id-19345'
 
-# Change context name
-kubectl config rename-context $(kubectl config current-context) l2
+# Check its logs
+kubectl logs <type/NAME> -n <NAMESPACE>        # For example 'kubectl logs pod/submission-id-19345'
+```
 
-# Nvidia Device Plugin
-kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.0/nvidia-device-plugin.yml
+To execute a command in a running pod
+```bash
+kubectl exec -n <NAMESPACE> -it <type/NAME> -- <COMMAND>
+```
 
-# Cluster autoscaler
-kubectl apply -f config/cluster-autoscaler-autodiscover.yaml
+To enter it, execute the previous line with the `/bin/bash` COMMAND
 
-# Fluentd
-kubectl apply -f config/fluentd.yaml
-kubectl apply -f jobs/carla-benchmark-job.yaml
+# Others 
 
-# Cluster deletion
-kubectl delete -f config/fluentd.yaml
-kubectl delete -f jobs/carla-benchmark-job.yaml
-eksctl delete cluster --region=us-west-2 --name=beta-leaderboard-20
+To enter an instance through ssh
+```bash
+# SSH into a machine
+ssh -i <private-key-file> ubuntu@<public-ip>
 ```

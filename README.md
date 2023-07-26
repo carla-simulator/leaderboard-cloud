@@ -18,8 +18,8 @@ Below is a summary of the different topics that will be discussed for a succesfu
 1. [AWS interface](/docs/5_aws_interface.md)
     - [Storage services](/docs/5_1_storage_services.md)
     - [Deployment services](/docs/5_2_automatic_job_deployment.md)
-1. [EvalAI Frontend](docs/6_frontend.md)
-1. [Useful Commands](docs/x_useful_commands.md)
+1. [EvalAI Frontend](/docs/6_frontend.md)
+1. [Useful Commands](/docs/x_useful_commands.md)
 
 _NOTE: These docs assume that you are using Linux and that all commands are run from either of the leaderboard folders.
 

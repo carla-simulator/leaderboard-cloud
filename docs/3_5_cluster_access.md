@@ -51,6 +51,15 @@ aws eks update-kubeconfig --region us-west-2 --name leaderboard-10 --alias l1
 aws eks update-kubeconfig --region us-west-2 --name leaderboard-20 --alias l2
 ```
 
+Note that for the creator of the cluster, the alias has to be changed with this command
+```bash
+# Change the Leaderboard 1.0 cluster alias to l1
+kubectl config rename-context $(kubectl config current-context) l1
+
+# Change the Leaderboard 2.0 cluster alias to l2
+kubectl config rename-context $(kubectl config current-context) l2
+```
+
 With that, navigate to `~/.kube/config`, where you can see all the clusters, contexts and users available. The last step is to specify that these clusters will be using the `eks-admin` profile, instead of the default one, so manually add them to the each of the users. It should result in something like this:
 ```yaml
 - name: arn:aws:eks:us-west-2:342236305043:cluster/leaderboard-10
