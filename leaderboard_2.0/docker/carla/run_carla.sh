@@ -8,6 +8,7 @@ AGENT_DONE_FILE="/tmp/status/agent-$ID.done"
 SIMULATOR_CRASH_FILE="/tmp/status/simulator-$ID.crash$CRASH_ID"
 SIMULATOR_DONE_FILE="/tmp/status/simulator-$ID.done"
 SIMULATION_CANCEL_FILE="/tmp/status/simulation.cancel"
+SIMULATOR_LOGS="/tmp/simulator/simulator-$ID.log"
 
 # Ending function before exitting the container
 kill_all_processes() {
@@ -38,6 +39,9 @@ kill_and_wait_for_agent () {
         echo "Detected that the agent has finished. Exiting with success..."
     fi
 }
+
+# Save all the outpus into a file, which will be sent to s3
+exec > >(tee "$SIMULATOR_LOGS") 2>&1
 
 echo ""
 echo "Starting CARLA server"

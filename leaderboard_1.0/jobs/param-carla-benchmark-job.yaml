@@ -23,6 +23,7 @@ spec:
               if [ -z $RESUME ]; then
                 echo "Detected a normal run, creating log files"
                 mkdir -m 0777 -p /tmp/logs/agent/agent{1..4}
+                mkdir -m 0777 -p /tmp/logs/recorder
                 mkdir -m 0777 -p /tmp/logs/simulator
                 mkdir -m 0777 -p /tmp/logs/logcopy
                 mkdir -m 0777 -p /tmp/logs/containers-status
@@ -66,10 +67,13 @@ spec:
           volumeMounts:
             - mountPath: /home/carla/CarlaUE4/Saved
               name: logs
-              subPath: simulator
+              subPath: recorder
             - mountPath: /tmp/status
               name: logs
               subPath: containers-status
+            - mountPath: /tmp/simulator
+              name: logs
+              subPath: simulator
           securityContext:
             privileged: true
           resources:
@@ -129,10 +133,13 @@ spec:
           volumeMounts:
             - mountPath: /home/carla/CarlaUE4/Saved
               name: logs
-              subPath: simulator
+              subPath: recorder
             - mountPath: /tmp/status
               name: logs
               subPath: containers-status
+            - mountPath: /tmp/simulator
+              name: logs
+              subPath: simulator
           securityContext:
             privileged: true
           resources:
@@ -192,10 +199,13 @@ spec:
           volumeMounts:
             - mountPath: /home/carla/CarlaUE4/Saved
               name: logs
-              subPath: simulator
+              subPath: recorder
             - mountPath: /tmp/status
               name: logs
               subPath: containers-status
+            - mountPath: /tmp/simulator
+              name: logs
+              subPath: simulator
           securityContext:
             privileged: true
           resources:
@@ -255,10 +265,13 @@ spec:
           volumeMounts:
             - mountPath: /home/carla/CarlaUE4/Saved
               name: logs
-              subPath: simulator
+              subPath: recorder
             - mountPath: /tmp/status
               name: logs
               subPath: containers-status
+            - mountPath: /tmp/simulator
+              name: logs
+              subPath: simulator
           securityContext:
             privileged: true
           resources:
