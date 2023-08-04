@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ros-test
+spec:
+  template:
+    spec:
+      serviceAccountName: submission-worker
+      nodeSelector:
+        node.kubernetes.io/instance-type: t3.large
+
+      initContainers:
+        - name: check-ros-agent
+          image: 342236305043.dkr.ecr.us-east-1.amazonaws.com/carla-autonomous-driving-challenge-2-0-2098-participant-team-22363:7b1db663-d11b-4fb5-9847-85b5cb19473b
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              if [ -z $ROS_VERSION ]; then
+                echo "Found the ROS_VERSION environment variable, creating the file"
+                mkdir -m 777 -p /tmp/ros-agent
+                touch /tmp/ros-agent/ros-agent.txt
+              fi
+          volumeMounts:
+            - mountPath: /tmp
+              name: ros
+
+      containers:
+        - name: check-ros-upload
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-20-logcopy:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              if [[ -f "/tmp/ros-agent/ros-agent.txt" ]]; then
+                echo "Found a ROS agent"
+                aws s3 cp /tmp/ros-agent/ros-agent.txt s3://${S3_BUCKET}/${SUBMISSION_ID}/ros-agent.txt
+              fi
+              sleep 120
+
+          env:
+            - name: SUBMISSION_ID
+              value: "0"
+            - name: S3_BUCKET
+              value: "leaderboard-20"
+          volumeMounts:
+            - mountPath: /tmp
+              name: ros
+
+      restartPolicy: Never
+      volumes:
+        - name: ros
+          emptyDir: {}

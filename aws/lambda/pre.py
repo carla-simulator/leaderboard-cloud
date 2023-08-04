@@ -58,6 +58,8 @@ def lambda_handler(event, context):
         },
         "submission": {
             "name": "submission-{}".format(str(event["submission_pk"])),
+            "rosname": "submission-{}-check-ros".format(str(event["submission_pk"])),
+            "using_ros_agent": False,
             "challenge_id": str(event["challenge_pk"]),
             "submission_id": str(event["submission_pk"]),
             "team_id": str(submission_data.get("participant_team", "")),

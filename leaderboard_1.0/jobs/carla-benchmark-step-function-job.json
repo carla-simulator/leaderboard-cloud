@@ -1,0 +1,395 @@
+{
+  "apiVersion": "batch/v1",
+  "kind": "Job",
+  "metadata": {
+    "name.$": "$.submission.name"
+  },
+  "spec": {
+    "backoffLimit": 8,
+    "template": {
+      "spec": {
+        "serviceAccountName": "submission-worker",
+        "nodeSelector": {
+          "node.kubernetes.io/instance-type": "g5.12xlarge"
+        },
+        "initContainers": [
+          {
+            "name": "private-contents",
+            "image.$": "$.cluster.leaderboard_image",
+            "command": [
+              "/bin/bash",
+              "-c"
+            ],
+            "args": [
+              "cp -r ${LEADERBOARD_ROOT}/* /tmp/leaderboard/\ncp -r ${SCENARIO_RUNNER_ROOT}/* /tmp/scenario_runner/\ncp -r ${CARLA_PYTHON_API_ROOT}/* /tmp/CARLA/\n\nif [ -z $RESUME ]; then\n  echo \"Detected a normal run, creating log files\"\n  mkdir -m 0777 -p /tmp/logs/agent/agent{1..4}\n  mkdir -m 0777 -p /tmp/logs/simulator\n  mkdir -m 0777 -p /tmp/logs/logcopy\n  mkdir -m 0777 -p /tmp/logs/containers-status\n  mkdir -m 0777 -p /tmp/logs/evalai\nelse\n  echo \"Detected a resume, download log files from S3, and removing the container status data\"\n  aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive\n  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID} /tmp/logs\n  mkdir -m 0777 -p /tmp/logs/containers-status\nfi\n"
+            ],
+            "env": [
+              {
+                "name": "SUBMISSION_ID",
+                "value.$": "$.submission.submission_id"
+              },
+              {
+                "name": "RESUME",
+                "value.$": "$.submission.resume"
+              },
+              {
+                "name": "S3_BUCKET",
+                "value.$": "$.aws.s3_bucket"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "mountPath": "/tmp/leaderboard",
+                "name": "leaderboard"
+              },
+              {
+                "mountPath": "/tmp/scenario_runner",
+                "name": "scenario-runner"
+              },
+              {
+                "mountPath": "/tmp/CARLA",
+                "name": "carla-python-api"
+              },
+              {
+                "mountPath": "/tmp/logs",
+                "name": "logs"
+              }
+            ]
+          }
+        ],
+        "containers": [
+          {
+            "name": "simulator-1",
+            "image.$": "$.cluster.simulator_image",
+            "command": [
+              "/bin/bash",
+              "-c"
+            ],
+            "args": [
+              "bash /home/carla/run_carla.sh\n"
+            ],
+            "env": [
+              {
+                "name": "CARLA_PORT",
+                "value": "2000"
+              },
+              {
+                "name": "NVIDIA_VISIBLE_DEVICES",
+                "value": "0"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "mountPath": "/home/carla/CarlaUE4/Saved",
+                "name": "logs",
+                "subPath": "simulator"
+              },
+              {
+                "mountPath": "/tmp/status",
+                "name": "logs",
+                "subPath": "containers-status"
+              }
+            ],
+            "securityContext": {
+              "privileged": true
+            },
+            "resources": {
+              "limits": {
+                "nvidia.com/gpu": 1
+              }
+            }
+          },
+          {
+            "name": "agent-1",
+            "image.$": "$.submission.submitted_image_uri",
+            "command": [
+              "/bin/bash",
+              "-c"
+            ],
+            "args": [
+              "bash /workspace/leaderboard/run_leaderboard.sh\n"
+            ],
+            "env": [
+              {
+                "name": "CARLA_PORT",
+                "value": "2000"
+              },
+              {
+                "name": "CHALLENGE_TRACK_CODENAME",
+                "value.$": "$.submission.track_codename"
+              },
+              {
+                "name": "ROUTES_SUBSET",
+                "value": "0-19"
+              },
+              {
+                "name": "ROUTES",
+                "value": "/workspace/leaderboard/data/routes_testing.xml"
+              },
+              {
+                "name": "SCENARIOS",
+                "value": "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
+              },
+              {
+                "name": "REPETITIONS",
+                "value": "5"
+              },
+              {
+                "name": "RESUME",
+                "value.$": "$.submission.resume"
+              },
+              {
+                "name": "NVIDIA_DRIVER_CAPABILITIES",
+                "value": "all"
+              },
+              {
+                "name": "NVIDIA_VISIBLE_DEVICES",
+                "value": "0"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "mountPath": "/workspace/leaderboard",
+                "name": "leaderboard"
+              },
+              {
+                "mountPath": "/workspace/scenario_runner",
+                "name": "scenario-runner"
+              },
+              {
+                "mountPath": "/workspace/CARLA",
+                "name": "carla-python-api"
+              },
+              {
+                "mountPath": "/tmp/agent",
+                "name": "logs",
+                "subPath": "agent/agent1"
+              },
+              {
+                "mountPath": "/tmp/status",
+                "name": "logs",
+                "subPath": "containers-status"
+              }
+            ]
+          },
+          {
+            "name": "simulator-2",
+            "image.$": "$.cluster.simulator_image",
+            "command": [
+              "/bin/bash",
+              "-c"
+            ],
+            "args": [
+              "SIMULATOR_DONE_FILE=\"/tmp/status/simulator-2.done\"\necho \"Creating the agent done file\"\ntouch $SIMULATOR_DONE_FILE\n"
+            ],
+            "volumeMounts": [
+              {
+                "mountPath": "/tmp/status",
+                "name": "logs",
+                "subPath": "containers-status"
+              }
+            ],
+            "securityContext": {
+              "privileged": true
+            },
+            "resources": {
+              "limits": {
+                "nvidia.com/gpu": 1
+              }
+            }
+          },
+          {
+            "name": "agent-2",
+            "image.$": "$.submission.submitted_image_uri",
+            "command": [
+              "/bin/bash",
+              "-c"
+            ],
+            "args": [
+              "AGENT_DONE_FILE=\"/tmp/status/agent-2.done\"\necho \"Creating the agent done file\"\ntouch $AGENT_DONE_FILE\n"
+            ],
+            "volumeMounts": [
+              {
+                "mountPath": "/tmp/status",
+                "name": "logs",
+                "subPath": "containers-status"
+              }
+            ]
+          },
+          {
+            "name": "simulator-3",
+            "image.$": "$.cluster.simulator_image",
+            "command": [
+              "/bin/bash",
+              "-c"
+            ],
+            "args": [
+              "SIMULATOR_DONE_FILE=\"/tmp/status/simulator-3.done\"\necho \"Creating the agent done file\"\ntouch $SIMULATOR_DONE_FILE\n"
+            ],
+            "volumeMounts": [
+              {
+                "mountPath": "/tmp/status",
+                "name": "logs",
+                "subPath": "containers-status"
+              }
+            ],
+            "securityContext": {
+              "privileged": true
+            },
+            "resources": {
+              "limits": {
+                "nvidia.com/gpu": 1
+              }
+            }
+          },
+          {
+            "name": "agent-3",
+            "image.$": "$.submission.submitted_image_uri",
+            "command": [
+              "/bin/bash",
+              "-c"
+            ],
+            "args": [
+              "AGENT_DONE_FILE=\"/tmp/status/agent-3.done\"\necho \"Creating the agent done file\"\ntouch $AGENT_DONE_FILE\n"
+            ],
+            "volumeMounts": [
+              {
+                "mountPath": "/tmp/status",
+                "name": "logs",
+                "subPath": "containers-status"
+              }
+            ]
+          },
+          {
+            "name": "simulator-4",
+            "image.$": "$.cluster.simulator_image",
+            "command": [
+              "/bin/bash",
+              "-c"
+            ],
+            "args": [
+              "SIMULATOR_DONE_FILE=\"/tmp/status/simulator-4.done\"\necho \"Creating the agent done file\"\ntouch $SIMULATOR_DONE_FILE\n"
+            ],
+            "volumeMounts": [
+              {
+                "mountPath": "/tmp/status",
+                "name": "logs",
+                "subPath": "containers-status"
+              }
+            ],
+            "securityContext": {
+              "privileged": true
+            },
+            "resources": {
+              "limits": {
+                "nvidia.com/gpu": 1
+              }
+            }
+          },
+          {
+            "name": "agent-4",
+            "image.$": "$.submission.submitted_image_uri",
+            "command": [
+              "/bin/bash",
+              "-c"
+            ],
+            "args": [
+              "AGENT_DONE_FILE=\"/tmp/status/agent-4.done\"\necho \"Creating the agent done file\"\ntouch $AGENT_DONE_FILE\n"
+            ],
+            "volumeMounts": [
+              {
+                "mountPath": "/tmp/status",
+                "name": "logs",
+                "subPath": "containers-status"
+              }
+            ]
+          },
+          {
+            "name": "logcopy",
+            "image.$": "$.cluster.logcopy_image",
+            "command": [
+              "/bin/bash",
+              "-c"
+            ],
+            "args": [
+              "bash /workspace/run_logcopy.sh\n"
+            ],
+            "env": [
+              {
+                "name": "CHALLENGE_ID",
+                "value.$": "$.submission.challenge_id"
+              },
+              {
+                "name": "SUBMISSION_ID",
+                "value.$": "$.submission.submission_id"
+              },
+              {
+                "name": "TRACK_ID",
+                "value.$": "$.submission.track_id"
+              },
+              {
+                "name": "TEAM_ID",
+                "value.$": "$.submission.team_id"
+              },
+              {
+                "name": "S3_BUCKET",
+                "value.$": "$.aws.s3_bucket"
+              },
+              {
+                "name": "DYNAMODB_SUBMISSIONS_TABLE",
+                "value.$": "$.aws.dynamodb_submissions_table"
+              },
+              {
+                "name": "EVALAI_AUTH_TOKEN",
+                "value.$": "$.evalai.auth_token"
+              },
+              {
+                "name": "EVALAI_API_SERVER",
+                "value.$": "$.evalai.api_server"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "mountPath": "/logs",
+                "name": "logs"
+              },
+              {
+                "mountPath": "/utils/leaderboard",
+                "name": "leaderboard"
+              },
+              {
+                "mountPath": "/utils/scenario_runner",
+                "name": "scenario-runner"
+              }
+            ]
+          }
+        ],
+        "restartPolicy": "OnFailure",
+        "volumes": [
+          {
+            "name": "leaderboard",
+            "emptyDir": {}
+          },
+          {
+            "name": "scenario-runner",
+            "emptyDir": {}
+          },
+          {
+            "name": "carla-python-api",
+            "emptyDir": {}
+          },
+          {
+            "name": "logs",
+            "emptyDir": {}
+          },
+          {
+            "name": "x11",
+            "hostPath": {
+              "path": "/tmp/.X11-unix"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

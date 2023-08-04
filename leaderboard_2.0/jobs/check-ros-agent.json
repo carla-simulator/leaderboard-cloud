@@ -1,0 +1,72 @@
+{
+  "apiVersion": "batch/v1",
+  "kind": "Job",
+  "metadata": {
+    "name.$": "$.submission.rosname"
+  },
+  "spec": {
+    "template": {
+      "spec": {
+        "serviceAccountName": "submission-worker",
+        "nodeSelector": {
+          "node.kubernetes.io/instance-type": "t3.large"
+        },
+        "initContainers": [
+          {
+            "name": "check-ros-agent",
+            "image.$": "$.submission.submitted_image_uri",
+            "command": [
+              "/bin/bash",
+              "-c"
+            ],
+            "args": [
+              "if [ -z $ROS_VERSION ]; then\n  echo \"Found the ROS_VERSION environment variable, creating the file\"\n  mkdir -m 777 -p /tmp/ros-agent\n  touch /tmp/ros-agent/using-ros-agent.txt\nfi\n"
+            ],
+            "volumeMounts": [
+              {
+                "mountPath": "/tmp",
+                "name": "ros"
+              }
+            ]
+          }
+        ],
+        "containers": [
+          {
+            "name": "check-ros-upload",
+            "image.$": "$.cluster.logcopy_image",
+            "command": [
+              "/bin/bash",
+              "-c"
+            ],
+            "args": [
+              "if [[ -f \"/tmp/ros-agent/using-ros-agent.txt\" ]]; then\n  echo \"Found a ROS agent file\"\n  aws s3 cp /tmp/ros-agent/using-ros-agent.txt s3://${S3_BUCKET}/${SUBMISSION_ID}/using-ros-agent.txt\nfi\n"
+            ],
+            "env": [
+              {
+                "name": "SUBMISSION_ID",
+                "value.$": "$.submission.submission_id"
+              },
+              {
+                "name": "S3_BUCKET",
+                "value.$": "$.aws.s3_bucket"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "mountPath": "/tmp",
+                "name": "ros"
+              }
+            ]
+          }
+        ],
+        "restartPolicy": "Never",
+        "volumes": [
+          {
+            "name": "ros",
+            "emptyDir": {}
+          }
+        ]
+      }
+    }
+  }
+}

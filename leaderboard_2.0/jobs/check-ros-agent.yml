@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name.$: $.submission.rosname
+spec:
+  template:
+    spec:
+      serviceAccountName: submission-worker
+      nodeSelector:
+        node.kubernetes.io/instance-type: g5.12xlarge
+
+      initContainers:
+        - name: check-ros-agent
+          image.$: $.submission.submitted_image_uri
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              if [ -z $ROS_VERSION ]; then
+                echo "Found the ROS_VERSION environment variable, creating the file"
+                mkdir -m 777 -p /tmp/ros-agent
+                touch /tmp/ros-agent/using-ros-agent.txt
+              fi
+          volumeMounts:
+            - mountPath: /tmp
+              name: ros
+
+      containers:
+        - name: check-ros-upload
+          image.$: $.cluster.logcopy_image
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              if [[ -f "/tmp/ros-agent/using-ros-agent.txt" ]]; then
+                echo "Found a ROS agent file"
+                aws s3 cp /tmp/ros-agent/using-ros-agent.txt s3://${S3_BUCKET}/${SUBMISSION_ID}/using-ros-agent.txt
+              fi
+          env:
+            - name: SUBMISSION_ID
+              value.$: $.submission.submission_id
+            - name: S3_BUCKET
+              value.$: "$.aws.s3_bucket"
+          volumeMounts:
+            - mountPath: /tmp
+              name: ros
+
+      restartPolicy: Never
+      volumes:
+        - name: ros
+          emptyDir: {}
