@@ -1,5 +1,3 @@
-```sh
-
 PIPE_ROLE_NAME="LeaderboardPipeRole"
 LAMBDA_ROLE_NAME="LeaderboardLambdaRole"
 SF_ROLE_NAME="LeaderboardStepFunctionRole"
@@ -16,5 +14,3 @@ aws iam put-role-policy --role-name $LAMBDA_ROLE_NAME --policy-name $LAMBDA_POLI
 
 aws iam create-role --role-name=$SF_ROLE_NAME --assume-role-policy-document "file://trust_relationships/stepfunction.json"
 aws iam put-role-policy --role-name $SF_ROLE_NAME --policy-name $SF_POLICY_NAME --policy-document "file://permissions/stepfunction.json"
-
-```
