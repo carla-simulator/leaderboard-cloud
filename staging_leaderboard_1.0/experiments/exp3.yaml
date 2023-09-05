@@ -1,0 +1,438 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: submission-exp3
+spec:
+  template:
+    spec:
+      serviceAccountName: submission-worker
+      nodeSelector:
+        node.kubernetes.io/instance-type: g5.12xlarge
+      initContainers:
+        - name: leaderboard-copy
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-testing
+          command: [ "sh", "-c", "cp -r /workspace/leaderboard/* /tmp/leaderboard-master/"]
+          volumeMounts:
+            - mountPath: /tmp/leaderboard-master
+              name: leaderboard-master
+        - name: scenario-copy
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-testing
+          command: [ "sh", "-c", "cp -r /workspace/scenario_runner/* /tmp/scenario-runner-master/"]
+          volumeMounts:
+            - mountPath: /tmp/scenario-runner-master
+              name: scenario-runner-master
+        - name: carla-root-copy
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/leaderboard-testing
+          command: [ "sh", "-c", "cp -r /workspace/CARLA/* /tmp/carla-root-master/"]
+          volumeMounts:
+            - mountPath: /tmp/carla-root-master
+              name: carla-root-master
+      containers:
+        - name: simulator-1
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/challenge-simulator:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Starting CARLA server"
+              ./CarlaUE4.sh  -carla-rpc-port=2000 -opengl -nosound
+              echo "Stopped CARLA server"
+              exit 0
+          env:
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: SDL_VIDEODRIVER
+              value: "offscreen"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "0"
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+        - name: agent-1
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-72e0bac2-team-177:19f6c555-b404-4d3f-b1f2-1b61be797aa7
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Sleeping a bit to ensure CARLA is ready"
+              sleep 60
+              echo "Starting agent"
+              pip3 install --force-reinstall torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113
+
+              echo "python3 ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator.py \
+              --routes=${ROUTES} \
+              --scenarios=${SCENARIOS} \
+              --routes-subset=${ROUTES_SUBSET} \
+              --repetitions=${REPETITIONS} \
+              --track=${CHALLENGE_TRACK_CODENAME} \
+              --checkpoint=${CHECKPOINT_ENDPOINT} \
+              --agent=${TEAM_AGENT} \
+              --agent-config=${TEAM_CONFIG} \
+              --debug=${DEBUG_CHALLENGE} \
+              --record=${RECORD_PATH} \
+              --resume=${RESUME} \
+              --port=${CARLA_PORT}" \
+              --trafficManagerPort=${CARLA_TM_PORT}> /workspace/leaderboard/scripts/run_evaluation.sh
+
+              bash /workspace/leaderboard/scripts/run_evaluation.sh
+              echo "Finished agent"
+              exit 0
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard-master
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner-master
+            - mountPath: /workspace/CARLA
+              name: carla-root-master
+          env:
+            - name: CARLA_PORT
+              value: "2000"
+            - name: CARLA_TM_PORT
+              value: "8000"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "0"
+            - name: HTTP_PROXY
+              value: ""
+            - name: HTTPS_PROXY
+              value: ""
+            - name: LEADERBOARD_ROOT
+              value: "/workspace/leaderboard"
+            - name: CARLA_ROOT
+              value: "/workspace/CARLA"
+            - name: SCENARIO_RUNNER_ROOT
+              value: "/workspace/scenario_runner"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_testleaderboard.xml"
+            - name: ROUTES_SUBSET
+              value: "0"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_public.json"
+            - name: REPETITIONS
+              value: "1"
+            - name: CHALLENGE_TRACK_CODENAME
+              value: "SENSORS"
+            - name: CHECKPOINT_ENDPOINT
+              value: "/workspace/results/results.json"
+            - name: DEBUG_CHALLENGE
+              value: "0"
+            - name: RECORD_PATH
+              value: "/home/carla"
+            - name: RESUME
+              value: ""
+        - name: simulator-2
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/challenge-simulator:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Starting CARLA server"
+              ./CarlaUE4.sh  -carla-rpc-port=2100 -opengl -nosound
+              echo "Stopped CARLA server"
+              exit 0
+          env:
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: SDL_VIDEODRIVER
+              value: "offscreen"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "1"
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+        - name: agent-2
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-72e0bac2-team-177:19f6c555-b404-4d3f-b1f2-1b61be797aa7
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Sleeping a bit to ensure CARLA is ready"
+              sleep 60
+              echo "Starting agent"
+              pip3 install --force-reinstall torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113
+
+              echo "python3 ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator.py \
+              --routes=${ROUTES} \
+              --scenarios=${SCENARIOS} \
+              --routes-subset=${ROUTES_SUBSET} \
+              --repetitions=${REPETITIONS} \
+              --track=${CHALLENGE_TRACK_CODENAME} \
+              --checkpoint=${CHECKPOINT_ENDPOINT} \
+              --agent=${TEAM_AGENT} \
+              --agent-config=${TEAM_CONFIG} \
+              --debug=${DEBUG_CHALLENGE} \
+              --record=${RECORD_PATH} \
+              --resume=${RESUME} \
+              --port=${CARLA_PORT}" \
+              --trafficManagerPort=${CARLA_TM_PORT}> /workspace/leaderboard/scripts/run_evaluation.sh
+
+              bash /workspace/leaderboard/scripts/run_evaluation.sh
+              echo "Finished agent"
+              exit 0
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard-master
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner-master
+            - mountPath: /workspace/CARLA
+              name: carla-root-master
+          env:
+            - name: CARLA_PORT
+              value: "2100"
+            - name: CARLA_TM_PORT
+              value: "8100"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "1"
+            - name: HTTP_PROXY
+              value: ""
+            - name: HTTPS_PROXY
+              value: ""
+            - name: LEADERBOARD_ROOT
+              value: "/workspace/leaderboard"
+            - name: CARLA_ROOT
+              value: "/workspace/CARLA"
+            - name: SCENARIO_RUNNER_ROOT
+              value: "/workspace/scenario_runner"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_testleaderboard.xml"
+            - name: ROUTES_SUBSET
+              value: "0"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_public.json"
+            - name: REPETITIONS
+              value: "1"
+            - name: CHALLENGE_TRACK_CODENAME
+              value: "SENSORS"
+            - name: CHECKPOINT_ENDPOINT
+              value: "/workspace/results/results.json"
+            - name: DEBUG_CHALLENGE
+              value: "0"
+            - name: RECORD_PATH
+              value: "/home/carla"
+            - name: RESUME
+              value: ""
+        - name: simulator-3
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/challenge-simulator:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Starting CARLA server"
+              ./CarlaUE4.sh  -carla-rpc-port=2200 -opengl -nosound
+              echo "Stopped CARLA server"
+              exit 0
+          env:
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: SDL_VIDEODRIVER
+              value: "offscreen"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "2"
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+        - name: agent-3
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-72e0bac2-team-177:19f6c555-b404-4d3f-b1f2-1b61be797aa7
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Sleeping a bit to ensure CARLA is ready"
+              sleep 60
+              echo "Starting agent"
+              pip3 install --force-reinstall torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113
+
+              echo "python3 ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator.py \
+              --routes=${ROUTES} \
+              --scenarios=${SCENARIOS} \
+              --routes-subset=${ROUTES_SUBSET} \
+              --repetitions=${REPETITIONS} \
+              --track=${CHALLENGE_TRACK_CODENAME} \
+              --checkpoint=${CHECKPOINT_ENDPOINT} \
+              --agent=${TEAM_AGENT} \
+              --agent-config=${TEAM_CONFIG} \
+              --debug=${DEBUG_CHALLENGE} \
+              --record=${RECORD_PATH} \
+              --resume=${RESUME} \
+              --port=${CARLA_PORT}" \
+              --trafficManagerPort=${CARLA_TM_PORT}> /workspace/leaderboard/scripts/run_evaluation.sh
+
+              bash /workspace/leaderboard/scripts/run_evaluation.sh
+              echo "Finished agent"
+              exit 0
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard-master
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner-master
+            - mountPath: /workspace/CARLA
+              name: carla-root-master
+          env:
+            - name: CARLA_PORT
+              value: "2200"
+            - name: CARLA_TM_PORT
+              value: "8200"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "2"
+            - name: HTTP_PROXY
+              value: ""
+            - name: HTTPS_PROXY
+              value: ""
+            - name: LEADERBOARD_ROOT
+              value: "/workspace/leaderboard"
+            - name: CARLA_ROOT
+              value: "/workspace/CARLA"
+            - name: SCENARIO_RUNNER_ROOT
+              value: "/workspace/scenario_runner"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_testleaderboard.xml"
+            - name: ROUTES_SUBSET
+              value: "0"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_public.json"
+            - name: REPETITIONS
+              value: "1"
+            - name: CHALLENGE_TRACK_CODENAME
+              value: "SENSORS"
+            - name: CHECKPOINT_ENDPOINT
+              value: "/workspace/results/results.json"
+            - name: DEBUG_CHALLENGE
+              value: "0"
+            - name: RECORD_PATH
+              value: "/home/carla"
+            - name: RESUME
+              value: ""
+        - name: simulator-4
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/challenge-simulator:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Starting CARLA server"
+              ./CarlaUE4.sh  -carla-rpc-port=2300 -opengl -nosound
+              echo "Stopped CARLA server"
+              exit 0
+          env:
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: SDL_VIDEODRIVER
+              value: "offscreen"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "3"
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+        - name: agent-4
+          image: 342236305043.dkr.ecr.us-west-2.amazonaws.com/bm-72e0bac2-team-177:19f6c555-b404-4d3f-b1f2-1b61be797aa7
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Sleeping a bit to ensure CARLA is ready"
+              sleep 60
+              echo "Starting agent"
+              pip3 install --force-reinstall torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113
+
+              echo "python3 ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator.py \
+              --routes=${ROUTES} \
+              --scenarios=${SCENARIOS} \
+              --routes-subset=${ROUTES_SUBSET} \
+              --repetitions=${REPETITIONS} \
+              --track=${CHALLENGE_TRACK_CODENAME} \
+              --checkpoint=${CHECKPOINT_ENDPOINT} \
+              --agent=${TEAM_AGENT} \
+              --agent-config=${TEAM_CONFIG} \
+              --debug=${DEBUG_CHALLENGE} \
+              --record=${RECORD_PATH} \
+              --resume=${RESUME} \
+              --port=${CARLA_PORT}" \
+              --trafficManagerPort=${CARLA_TM_PORT}> /workspace/leaderboard/scripts/run_evaluation.sh
+
+              bash /workspace/leaderboard/scripts/run_evaluation.sh
+              echo "Finished agent"
+              exit 0
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard-master
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner-master
+            - mountPath: /workspace/CARLA
+              name: carla-root-master
+          env:
+            - name: CARLA_PORT
+              value: "2300"
+            - name: CARLA_TM_PORT
+              value: "8300"
+            - name: OMP_PROC_BIND
+              value: "FALSE"
+            - name: OMP_NUM_THREADS
+              value: "64"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "3"
+            - name: HTTP_PROXY
+              value: ""
+            - name: HTTPS_PROXY
+              value: ""
+            - name: LEADERBOARD_ROOT
+              value: "/workspace/leaderboard"
+            - name: CARLA_ROOT
+              value: "/workspace/CARLA"
+            - name: SCENARIO_RUNNER_ROOT
+              value: "/workspace/scenario_runner"
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_testleaderboard.xml"
+            - name: ROUTES_SUBSET
+              value: "0"
+            - name: SCENARIOS
+              value: "/workspace/leaderboard/data/all_towns_traffic_scenarios_public.json"
+            - name: REPETITIONS
+              value: "1"
+            - name: CHALLENGE_TRACK_CODENAME
+              value: "SENSORS"
+            - name: CHECKPOINT_ENDPOINT
+              value: "/workspace/results/results.json"
+            - name: DEBUG_CHALLENGE
+              value: "0"
+            - name: RECORD_PATH
+              value: "/home/carla"
+            - name: RESUME
+              value: ""
+      restartPolicy: Never
+      volumes:
+        - name: leaderboard-master
+          emptyDir: {}
+        - name: scenario-runner-master
+          emptyDir: {}
+        - name: carla-root-master
+          emptyDir: {}
+        - name: x11
+          hostPath:
+            path: /tmp/.X11-unix
+  backoffLimit: 0
