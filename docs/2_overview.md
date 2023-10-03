@@ -2,10 +2,7 @@
 
 Before explaining all of the different components of the infrastructure, below is a diagram showing the relation between all of them.
 
-<center>
-<img style="width:100em" src="{{ "/docs/images/overview_diagram.png" | prepend: site.baseurl }}"/>
-<br>
-</center>
+![CARLA Modules](/docs/images/overview_diagram.png)
 
 The Leaderboard frontend is created as a challenge part of the EvalAI platform. Users can apply to that challenge and submit their dockers using the EvalAI CLI. EvalAI then connects with the Leaderboard backend in two ways.
 

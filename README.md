@@ -16,8 +16,9 @@ Below is a summary of the different topics that will be discussed for a succesfu
     - [Job overview](/docs/4_1_job_overview.md)
     - [Containers overview](/docs/4_2_containers_overview.md)
 1. [AWS interface](/docs/5_aws_interface.md)
-    - [Storage services](/docs/5_1_storage_services.md)
-    - [Deployment services](/docs/5_2_automatic_job_deployment.md)
+    - [User permissions](/docs/5_1_permissions.md)
+    - [Storage services](/docs/5_2_storage_services.md)
+    - [Deployment services](/docs/5_3_automatic_job_deployment.md)
 1. [EvalAI Frontend](/docs/6_frontend.md)
 1. [Useful Commands](/docs/x_useful_commands.md)
 

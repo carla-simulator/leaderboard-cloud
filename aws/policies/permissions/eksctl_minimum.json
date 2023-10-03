@@ -1,0 +1,143 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Action": "ec2:*",
+			"Effect": "Allow",
+			"Resource": "*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": "elasticloadbalancing:*",
+			"Resource": "*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": "cloudwatch:*",
+			"Resource": "*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": "autoscaling:*",
+			"Resource": "*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": "iam:CreateServiceLinkedRole",
+			"Resource": "*",
+			"Condition": {
+				"StringEquals": {
+					"iam:AWSServiceName": [
+						"autoscaling.amazonaws.com",
+						"ec2scheduled.amazonaws.com",
+						"elasticloadbalancing.amazonaws.com",
+						"spot.amazonaws.com",
+						"spotfleet.amazonaws.com",
+						"transitgateway.amazonaws.com"
+					]
+				}
+			}
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"cloudformation:*"
+			],
+			"Resource": "*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": "eks:*",
+			"Resource": "*"
+		},
+		{
+			"Action": [
+				"ssm:GetParameter",
+				"ssm:GetParameters"
+			],
+			"Resource": [
+				"arn:aws:ssm:*:342236305043:parameter/aws/*",
+				"arn:aws:ssm:*::parameter/aws/*"
+			],
+			"Effect": "Allow"
+		},
+		{
+			"Action": [
+				"kms:CreateGrant",
+				"kms:DescribeKey"
+			],
+			"Resource": "*",
+			"Effect": "Allow"
+		},
+		{
+			"Action": [
+				"logs:PutRetentionPolicy"
+			],
+			"Resource": "*",
+			"Effect": "Allow"
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"iam:CreateInstanceProfile",
+				"iam:DeleteInstanceProfile",
+				"iam:GetInstanceProfile",
+				"iam:RemoveRoleFromInstanceProfile",
+				"iam:GetRole",
+				"iam:CreateRole",
+				"iam:DeleteRole",
+				"iam:AttachRolePolicy",
+				"iam:PutRolePolicy",
+				"iam:AddRoleToInstanceProfile",
+				"iam:ListInstanceProfilesForRole",
+				"iam:PassRole",
+				"iam:DetachRolePolicy",
+				"iam:DeleteRolePolicy",
+				"iam:GetRolePolicy",
+				"iam:GetOpenIDConnectProvider",
+				"iam:CreateOpenIDConnectProvider",
+				"iam:DeleteOpenIDConnectProvider",
+				"iam:TagOpenIDConnectProvider",
+				"iam:ListAttachedRolePolicies",
+				"iam:TagRole",
+				"iam:GetPolicy",
+				"iam:CreatePolicy",
+				"iam:DeletePolicy",
+				"iam:ListPolicyVersions"
+			],
+			"Resource": [
+				"arn:aws:iam::342236305043:instance-profile/eksctl-*",
+				"arn:aws:iam::342236305043:role/eksctl-*",
+				"arn:aws:iam::342236305043:policy/eksctl-*",
+				"arn:aws:iam::342236305043:oidc-provider/*",
+				"arn:aws:iam::342236305043:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup",
+				"arn:aws:iam::342236305043:role/eksctl-managed-*"
+			]
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"iam:GetRole"
+			],
+			"Resource": [
+				"arn:aws:iam::342236305043:role/*"
+			]
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"iam:CreateServiceLinkedRole"
+			],
+			"Resource": "*",
+			"Condition": {
+				"StringEquals": {
+					"iam:AWSServiceName": [
+						"eks.amazonaws.com",
+						"eks-nodegroup.amazonaws.com",
+						"eks-fargate.amazonaws.com"
+					]
+				}
+			}
+		}
+	]
+}
