@@ -75,3 +75,16 @@ To enter an instance through ssh
 # SSH into a machine
 ssh -i <private-key-file> ubuntu@<public-ip>
 ```
+
+To get the kubelet status and logs
+```bash
+systemctl status kubelet
+journalctl -xe --unit kubelet
+```
+
+To get the containerd status, logs and configuration
+```bash
+systemctl status containerd
+journalctl -xe --unit containerd
+containerd config dump
+```
