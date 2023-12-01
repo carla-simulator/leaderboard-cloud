@@ -15,10 +15,19 @@ spec:
           command: ["/bin/bash", "-c"]
           args:
             - |
-              if [ -z $ROS_VERSION ]; then
+              echo "Sourcing '${HOME}/agent_sources.sh'"
+              source ${HOME}/.bashrc
+              if [[ -f "${HOME}/agent_sources.sh" ]]; then
+                source ${HOME}/agent_sources.sh
+              fi
+
+              if [ $ROS_VERSION ]; then
                 echo "Found the ROS_VERSION environment variable, creating the file"
                 mkdir -m 777 -p /tmp/ros-agent
                 touch /tmp/ros-agent/using-ros-agent.txt
+              else
+                echo "Not FOUND"
+                echo $ROS_VERSION
               fi
           volumeMounts:
             - mountPath: /tmp
