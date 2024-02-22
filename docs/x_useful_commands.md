@@ -34,6 +34,9 @@ kubectl config use-context l2
 
 # Changing the alias (for the cluster creator only)
 kubectl config rename-context $(kubectl config current-context) l2
+
+# Show all available contexts
+kubectl config get-contexts
 ```
 
 # kubectl
