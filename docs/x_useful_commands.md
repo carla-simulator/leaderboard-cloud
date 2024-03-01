@@ -37,6 +37,9 @@ kubectl config rename-context $(kubectl config current-context) l2
 
 # Show all available contexts
 kubectl config get-contexts
+
+# Remove context
+kubectl config delete-context l2-staging
 ```
 
 # kubectl
