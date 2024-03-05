@@ -1,16 +1,18 @@
 #!/bin/bash
 
 # Get the file names of this attempt
-ID=$(($NVIDIA_VISIBLE_DEVICES + 1))
+ID="$WORKER_ID"
 CRASH_ID=$(find /tmp/status -name *agent-$ID.crash* | wc -l)
 AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$CRASH_ID"
 AGENT_DONE_FILE="/tmp/status/agent-$ID.done"
 SIMULATOR_CRASH_FILE="/tmp/status/simulator-$ID.crash$CRASH_ID"
 SIMULATOR_DONE_FILE="/tmp/status/simulator-$ID.done"
-SIMULATION_CANCEL_FILE="/tmp/status/simulation.cancel"
+SIMULATION_CANCEL_FILE="/tmp/status/simulation-$ID.cancel"
 
-LEADERBOARD_LOGS=/tmp/agent/leaderboard.log
-AGENT_RESULTS=/tmp/agent/agent_results.json
+AGENT_FOLDER="/tmp/agent/agent-$ID" && mkdir -p $AGENT_FOLDER
+LEADERBOARD_LOGS="$AGENT_FOLDER/leaderboard.log"
+AGENT_RESULTS="$AGENT_FOLDER/agent_results.json"
+
 MAX_IDLE=800
 
 #######################
@@ -24,9 +26,6 @@ export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/:${SCENARIO_RUNNER_ROOT}":"${LE
 ############################
 ## LEADERBOARD PARAMETERS ##
 ############################
-[[ -z "${CARLA_PORT}" ]]                && export CARLA_PORT="2000"
-export CARLA_TM_PORT=$(($CARLA_PORT + 10))
-
 [[ -z "${CHALLENGE_TRACK_CODENAME}" ]]  && export CHALLENGE_TRACK_CODENAME="SENSORS"
 [[ -z "${ROUTES}" ]]                    && export ROUTES="/workspace/leaderboard/data/routes_testing.xml"
 [[ -z "${REPETITIONS}" ]]               && export REPETITIONS="1"
@@ -103,8 +102,6 @@ echo "Starting the Leaderboard"
 # To ensure the Leaderboard never blocks, run it in the background (Done using the '&' at the end)
 # while monitoring the changes to the results to know when it has finished.
 python3 -u ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator.py \
-    --port=${CARLA_PORT} \
-    --traffic-manager-port=${CARLA_TM_PORT} \
     --agent=${TEAM_AGENT} \
     --agent-config=${TEAM_CONFIG} \
     --track=${CHALLENGE_TRACK_CODENAME} \

@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Get the file names of this attempt
-ID=$(($NVIDIA_VISIBLE_DEVICES + 1))
+ID="$WORKER_ID"
 CRASH_ID=$(find /tmp/status -name *simulator-$ID.crash* | wc -l)
 AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$CRASH_ID"
 AGENT_DONE_FILE="/tmp/status/agent-$ID.done"
 SIMULATOR_CRASH_FILE="/tmp/status/simulator-$ID.crash$CRASH_ID"
 SIMULATOR_DONE_FILE="/tmp/status/simulator-$ID.done"
-SIMULATION_CANCEL_FILE="/tmp/status/simulation.cancel"
+SIMULATION_CANCEL_FILE="/tmp/status/simulation-$ID.cancel"
 
 # Ending function before exitting the container
 kill_all_processes() {
@@ -41,8 +41,7 @@ kill_and_wait_for_agent () {
 
 echo ""
 echo "Starting CARLA server"
-./CarlaUE4.sh -vulkan -carla-rpc-port=${CARLA_PORT} -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=${NVIDIA_VISIBLE_DEVICES} &
-
+./CarlaUE4.sh -vulkan -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=${NVIDIA_VISIBLE_DEVICES} &
 
 while sleep 5 ; do
     if [ -f $AGENT_CRASH_FILE ]; then

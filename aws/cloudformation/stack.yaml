@@ -1,0 +1,379 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Explorer architecture stack
+
+Parameters:
+
+  ProjectName:
+    Description: Name of the project
+    Type: String
+
+Resources:
+
+  ##############
+  # S3 buckets #
+  ##############
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${ProjectName}-bucket
+
+  ###################
+  # DynamoDB tables #
+  ###################
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${ProjectName}
+      AttributeDefinitions:
+        -
+          AttributeName: 'team_id'
+          AttributeType: 'S'
+        -
+          AttributeName: 'submission_id'
+          AttributeType: 'S'
+      KeySchema:
+        -
+          AttributeName: 'team_id'
+          KeyType: 'HASH'
+        -
+          AttributeName: 'submission_id'
+          KeyType: 'RANGE'
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  #########################
+  # CloudWatch log groups #
+  #########################
+  CloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub ${ProjectName}
+
+  ###########
+  # Secrets #
+  ###########
+  Secret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${ProjectName}
+
+  FrontendSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${ProjectName}-frontend
+
+  TracksSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${ProjectName}-tracks
+
+  ####################
+  # ECR repositories #
+  ####################
+  ERCSimulatorRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${ProjectName}-simulator
+
+  ECRContentsRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${ProjectName}-contents
+
+  ECRUploaderRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${ProjectName}-uploader
+
+  ECRMonitorRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${ProjectName}-monitor
+
+  #############
+  # SQS queue #
+  #############
+  SQSQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${ProjectName}
+
+
+  ################
+  # StepFunction #
+  ################
+  StepFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-stepfunction-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+              - 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service:
+                - 'states.amazonaws.com'
+      Policies:
+        - PolicyName: !Sub ${ProjectName}-stepfunction-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'states:StartExecution'
+                Resource:
+                  - !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${ProjectName}'
+              - Effect: Allow
+                Action:
+                  - 'states:DescribeExecution',
+                  - 'states:StopExecution'
+                Resource:
+                  - !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:execution:*:*'
+              - Effect: Allow
+                Action:
+                  - 'states:RedriveExecution'
+                Reousrce:
+                  - !Sub 'arn:aws:states:${AWS:Region}:${AWS::AccountId}:execution:{$ProjectName}/Map:*'
+              - Effect: Allow
+                Action:
+                  -  'events:PutTargets'
+                  -  'events:PutRule'
+                  -  'events:DescribeRule'
+                Reousrce:
+                  - !Sub 'arn:aws:events:${AWS:Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule'
+              - Effect: Allow
+                Action:
+                  - 'lambda:InvokeFunction'
+                Resource:
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*:*'
+              - Effect: Allow
+                Action:
+                  - 'xray:PutTraceSegments'
+                  - 'xray:PutTelemetryRecords'
+                  - 'xray:GetSamplingRules'
+                  - 'xray:GetSamplingTargets'
+                Resource:
+                  - '*'
+
+  StepFunction:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub ${ProjectName}
+      StateMachineType: STANDARD
+      DefinitionString: | 
+        {
+          "Comment": "A description of my state machine",
+          "StartAt": "Pass",
+          "States": {
+            "Pass": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        }
+      RoleArn: !GetAtt StepFunctionRole.Arn
+      DependsOn:
+        - StepFunctionRole
+
+  ########
+  # Pipe #
+  ########
+  PipeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-pipe-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+              - 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service:
+                - 'pipes.amazonaws.com'
+      Policies:
+        - PolicyName: !Sub ${ProjectName}-pipe-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'sqs:ReceiveMessage'
+                  - 'sqs:DeleteMessage'
+                  - 'sqs:GetQueueAttributes'
+                Resource:
+                  - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:*'
+              - Effect: Allow
+                Action:
+                  - 'states:StartExecution'
+                Resource:
+                  - !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:*'
+
+  Pipe:
+    Type: AWS::Pipes::Pipe
+    Properties:
+      Name: !Sub ${ProjectName}
+      Source: !GetAtt SQSQueue.Arn
+      Target: !GetAtt StepFunction.Arn
+      TargetParameters:
+        InputTemplate: |
+          {
+            "challenge_pk": <$.body.challenge_pk>,
+            "phase_pk": <$.body.phase_pk>,
+            "submission_pk": <$.body.submission_pk>,
+            "submitted_image_uri": <$.body.submitted_image_uri>
+          }
+      RoleArn: !GetAtt PipeRole.Arn
+    DependsOn:
+      - PipeRole
+      - SQSQueue
+      - StepFunction
+
+  ##########
+  # Lambda #
+  ##########
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+              - 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service:
+                - 'lambda.amazonaws.com'
+      Policies:
+        - PolicyName: !Sub ${ProjectName}-lambda-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                Resource:
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource:
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*'
+              - Effect: Allow
+                Action:
+                  - 's3:Get*'
+                  - 's3:List*'
+                  - 's3-object-lambda:Get*'
+                  - 's3-object-lambda:List*'
+                Resource:
+                  - 'arn:aws:s3:::*'
+              - Effect: Allow
+                Action:
+                  - 'secretsmanager:ListSecrets'
+                Resource:
+                  - '*'
+              - Effect: Allow
+                Action:
+                  - 'secretsmanager:GetResourcePolicy'
+                  - 'secretsmanager:GetSecretValue'
+                  - 'secretsmanager:DescribeSecret'
+                  - 'secretsmanager:ListSecretVersionIds'
+                Resource:
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:GetItem'
+                  - 'dynamodb:PutItem'
+                  - 'dynamodb:UpdateItem'
+                  - 'dynamodb:DeleteItem'
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*'
+
+  PreLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-pre
+      Architectures:
+        - x86_64
+      Runtime: python3.10
+      Timeout: 30
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+          import json
+          def lambda_handler(event, context):
+            return {
+            'statusCode': 200,
+            'body': json.dumps('Hello from Lambda!')
+          }
+      Role: !GetAtt LambdaRole.Arn
+      DependsOn:
+        - LambdaRole
+
+  PreParallelLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-preparallel
+      Architectures:
+        - x86_64
+      Runtime: python3.10
+      Timeout: 30
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+          import json
+          def lambda_handler(event, context):
+            return {
+            'statusCode': 200,
+            'body': json.dumps('Hello from Lambda!')
+          }
+      Role: !GetAtt LambdaRole.Arn
+      DependsOn:
+        - LambdaRole
+
+  PreMonitorLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-premonitor
+      Architectures:
+        - x86_64
+      Runtime: python3.10
+      Timeout: 30
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+          import json
+          def lambda_handler(event, context):
+            return {
+            'statusCode': 200,
+            'body': json.dumps('Hello from Lambda!')
+          }
+      Role: !GetAtt LambdaRole.Arn
+      DependsOn:
+        - LambdaRole
+
+  PostLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-post
+      Architectures:
+        - x86_64
+      Runtime: python3.10
+      Timeout: 30
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+          import json
+          def lambda_handler(event, context):
+            return {
+            'statusCode': 200,
+            'body': json.dumps('Hello from Lambda!')
+          }
+      Role: !GetAtt LambdaRole.Arn
+      DependsOn:
+        - LambdaRole

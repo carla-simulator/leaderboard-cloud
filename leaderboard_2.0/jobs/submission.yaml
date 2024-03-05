@@ -1,0 +1,154 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name.$: $.submission.name
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      serviceAccountName: submission-worker
+      nodeSelector:
+        node.kubernetes.io/instance-type: g5.12xlarge
+
+      initContainers:
+        - name: private-contents
+          image.$: $.cluster.leaderboard_image
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              cp -r ${LEADERBOARD_ROOT}/* /tmp/leaderboard/
+              cp -r ${SCENARIO_RUNNER_ROOT}/* /tmp/scenario_runner/
+              cp -r ${CARLA_PYTHON_API_ROOT}/* /tmp/CARLA/
+              cp -r ${GPU_UTILS_ROOT}/* /tmp/gpu_utils
+
+              if [ -z $RESUME ]; then
+                echo "Detected a normal run, creating log files"
+                mkdir -m 0777 -p /tmp/logs/agent
+                mkdir -m 0777 -p /tmp/logs/simulator
+                mkdir -m 0777 -p /tmp/logs/uploader
+                mkdir -m 0777 -p /tmp/logs/containers-status
+              else
+                echo "Detected a resume, download log files from S3, and removing the container status data"
+                #Descargar solo el merge results.json y ponerlo en /tmp/logs/agent?
+                # Q hacer con los agent1/leaderboard.log ....
+                aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/agent/results.json /tmp/logs/agent/results.json
+                aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive
+              fi
+
+              bash /tmp/gpu_utils/get_gpu_uuid.sh > /tmp/gpu_utils/gpu.txt
+          env:
+            - name: SUBMISSION_ID
+              value.$: $.submission.submission_id
+            - name: RESUME
+              value.$: $.submission.resume
+            - name: S3_BUCKET
+              value.$: "$.aws.s3_bucket"
+          volumeMounts:
+            - mountPath: /tmp/leaderboard
+              name: leaderboard
+            - mountPath: /tmp/scenario_runner
+              name: scenario-runner
+            - mountPath: /tmp/CARLA
+              name: carla-python-api
+            - mountPath: /tmp/gpu_utils
+              name: gpu-utils
+            - mountPath: /tmp/logs
+              name: logs
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+
+      containers:
+        
+        - name: simulator
+          image.$: $.cluster.simulator_image
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              export NVIDIA_VISIBLE_DEVICES=$(/gpu/get_gpu_device.sh)
+              bash /home/carla/run_carla.sh
+          env:
+            - name: WORKER_ID
+              value.$: $.parallelization.worker_id
+            - name: DISPLAY
+              value: ":0"
+          volumeMounts:
+            - mountPath: /tmp/.X11-unix
+              name: x11
+            - mountPath: /gpu
+              name: gpu-utils
+            - mountPath: /home/carla/CarlaUE4/Saved
+              name: logs
+              subPath: simulator
+            - mountPath: /tmp/status
+              name: logs
+              subPath: containers-status
+
+        - name: agent
+          image.$: $.submission.submitted_image_uri
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              export NVIDIA_VISIBLE_DEVICES=$(/gpu/get_gpu_device.sh)
+              bash /workspace/leaderboard/run_leaderboard.sh
+          env:
+            - name: WORKER_ID
+              value.$: $.parallelization.worker_id
+            - name: CHALLENGE_TRACK_CODENAME
+              value.$: $.submission.track_codename
+            - name: ROUTES_SUBSET
+              value.$: $.submission.subset
+            - name: ROUTES
+              value: "/workspace/leaderboard/data/routes_testing.xml"
+            - name: REPETITIONS
+              value: "1"
+            - name: RESUME
+              value.$: $.submission.resume
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner
+            - mountPath: /workspace/CARLA
+              name: carla-python-api
+            - mountPath: /gpu
+              name: gpu-utils
+            - mountPath: /tmp/agent
+              name: logs
+              subPath: agent
+            - mountPath: /tmp/status
+              name: logs
+              subPath: containers-status
+
+        - name: aws-uploader
+          image.$: $.cluster.uploader_image
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              bash /workspace/run_uploader.sh
+          env:
+            - name: WORKER_ID
+              value.$: $.parallelization.worker_id
+            - name: SUBMISSION_ID
+              value.$: $.submission.submission_id
+            - name: S3_BUCKET
+              value.$: "$.aws.s3_bucket"
+          volumeMounts:
+            - mountPath: /logs
+              name: logs
+
+      restartPolicy: OnFailure
+      volumes:
+        - name: leaderboard
+          emptyDir: {}
+        - name: scenario-runner
+          emptyDir: {}
+        - name: carla-python-api
+          emptyDir: {}
+        - name: gpu-utils
+          emptyDir: {}
+        - name: logs
+          emptyDir: {}
+        - name: x11
+          hostPath:
+            path: /tmp/.X11-unix

@@ -16,7 +16,7 @@ RUN pip3 install \
     requests \
     dictor
 
-COPY run_logcopy.sh /workspace/run_logcopy.sh
+COPY run_monitor.sh /workspace/run_monitor.sh
 COPY evalai/generate_results.py /workspace/evalai/generate_results.py
 COPY evalai/generate_stdout.py /workspace/evalai/generate_stdout.py
 COPY evalai/generate_metadata.py /workspace/evalai/generate_metadata.py

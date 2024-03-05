@@ -1,4 +1,3 @@
-import base64
 import copy
 import datetime
 import json
@@ -7,25 +6,6 @@ import time
 import urllib3
 
 import boto3
-import botocore.exceptions
-
-session = boto3.session.Session()
-client = session.client(
-    service_name="secretsmanager",
-)
-
-
-def get_secret(secret_id):
-    try:
-        response = client.get_secret_value(SecretId=secret_id)
-    except botocore.exceptions.ClientError as e:
-        raise e
-    else:
-        if "SecretString" in response:
-            secret = response["SecretString"]
-        else:
-            secret = base64.b64decode(response["SecretBinary"])
-        return json.loads(secret)
 
 
 def lambda_handler(event, context):
@@ -45,25 +25,23 @@ def lambda_handler(event, context):
 
     if ".cancel" in objs_extension:
         submission_status = "CANCELLED"
-    elif objs_extension.count(".done") == 9:
+    elif objs_extension.count(".done") == 3 * int(event["parallelization"]["workers"]):  # each job has 3 containers
         submission_status = "FINISHED"
     else:
         submission_status = "FAILED"
 
     submission_data = copy.deepcopy(event)
     submission_data["submission"]["submission_status"] = submission_status
-    submission_data["submission"]["end_time"] = f"{datetime.datetime.now().strftime('%Y-%m-%d %T%Z')} {time.tzname[time.daylight]}"
 
     results = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/results.json".format(event["submission"]["submission_id"]))
     stdout = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/stdout.txt".format(event["submission"]["submission_id"]))
     metadata = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/metadata.json".format(event["submission"]["submission_id"]))
 
     if submission_status == "FINISHED":
-        # Extract results
+        # extract results
         assert results is not ""
         submission_data["results"] = {k.replace(" ", "_").lower(): str(v) for k,v in json.loads(results)[0]["accuracies"].items()}
 
-    evalai_secrets = get_secret(secret_id="evalai")
     manager = urllib3.PoolManager()
     try:
         evalai_status = ""
@@ -71,8 +49,8 @@ def lambda_handler(event, context):
         while submission_status != evalai_status and retries < MAX_RETRIES:
             out = json.loads(manager.request(
                 method="PUT",
-                url="{}{}{}{}".format(evalai_secrets["api_server"], "/api/jobs/challenge/", event["submission"]["challenge_id"], "/update_submission/"),
-                headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"]), "Content-Type": "application/json"},
+                url="{}{}{}{}".format(submission_data["evalai"]["api_server"], "/api/jobs/challenge/", event["submission"]["challenge_id"], "/update_submission/"),
+                headers={"Authorization": "Bearer {}".format(submission_data["evalai"]["auth_token"]), "Content-Type": "application/json"},
                 body=json.dumps({
                     "submission": submission_data["submission"]["submission_id"],
                     "challenge_phase": submission_data["submission"]["track_id"],
@@ -88,8 +66,8 @@ def lambda_handler(event, context):
 
             evalai_status = json.loads(manager.request(
                 method="GET",
-                url="{0}{1}{2}".format(evalai_secrets["api_server"], "/api/jobs/submission/", event["submission"]["submission_id"]),
-                headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"])},
+                url="{0}{1}{2}".format(submission_data["evalai"]["api_server"], "/api/jobs/submission/", event["submission"]["submission_id"]),
+                headers={"Authorization": "Bearer {}".format(submission_data["evalai"]["auth_token"])},
             ).data).get("status", "").upper()
             retries += 1
 
@@ -97,5 +75,32 @@ def lambda_handler(event, context):
 
     except:
         pass
+
+    # update submissions in the database
+    dynamodb = boto3.resource('dynamodb')
+    submissions_table = dynamodb.Table(submission_data["aws"]["dynamodb_submissions_table"])
+    submissions_table.update_item(
+        Key={"team_id": submission_data["submission"]["team_id"], "submission_id": submission_data["submission"]["submission_id"]},
+        UpdateExpression="SET submission_status = :s, end_time = :t, driving_score = :ds, route_completion = :rc, infraction_penalty = :ip, collisions_pedestrians = :cp, collisions_vehicles = :cv, collisions_layout = :cl, red_light_infractions = :rl, stop_sign_infractions = :ss, off_road_infractions = :or, route_deviations = :rd, route_timeouts = :rt, agent_blocked = :ab, yield_emergency_vehicle_infractions = :ev, scenario_timeouts = :st, min_speed_infractions = :ms",
+        ExpressionAttributeValues={
+            ":s":  submission_data["submission"]["submission_status"],
+            ":t":  f"{datetime.datetime.now().strftime('%Y-%m-%d %T%Z')} {time.tzname[time.daylight]}",
+            ":ds": submission_data["results"].get("driving_score", "-"),
+            ":rc": submission_data["results"].get("route_completion", "-"),
+            ":ip": submission_data["results"].get("infraction_penalty", "-"),
+            ":cp": submission_data["results"].get("collisions_pedestrians", "-"),
+            ":cv": submission_data["results"].get("collisions_vehicles", "-"),
+            ":cl": submission_data["results"].get("collisions_layout", "-"),
+            ":rl": submission_data["results"].get("red_light_infractions", "-"),
+            ":ss": submission_data["results"].get("stop_sign_infractions", "-"),
+            ":or": submission_data["results"].get("off-road_infractions", "-"),
+            ":rd": submission_data["results"].get("route_deviations", "-"),
+            ":rt": submission_data["results"].get("route_timeouts", "-"),
+            ":ab": submission_data["results"].get("results.agent_blocked", "-"),
+            ":ev": submission_data["results"].get("yield_emergency_vehicle_infractions", "-"),
+            ":st": submission_data["results"].get("scenario_timeouts", "-"),
+            ":ms": submission_data["results"].get("min_speed_infractions", "-")
+        }
+    )
 
     return submission_data

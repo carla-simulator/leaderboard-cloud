@@ -67,6 +67,9 @@ cp ${CHALLENGE_CONTENTS_ROOT}/src/leaderboard_20/data/* .lbtmp/leaderboard/data
 cp ${CHALLENGE_CONTENTS_ROOT}/src/leaderboard_20/data/parked_vehicles.py .lbtmp/leaderboard/leaderboard/utils/parked_vehicles.py
 cp ${SCRIPT_DIR}/run_leaderboard.sh .lbtmp/leaderboard/
 
+echo "Copying GPU utils"
+cp -fr ${SCRIPT_DIR}/gpu_utils .lbtmp
+
 # build docker image
 echo "Building docker"
 docker build --force-rm --build-arg HTTP_PROXY=${HTTP_PROXY} \
