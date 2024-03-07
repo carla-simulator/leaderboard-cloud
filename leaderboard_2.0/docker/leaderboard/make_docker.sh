@@ -72,9 +72,6 @@ cp -fr ${SCRIPT_DIR}/gpu_utils .lbtmp
 
 # build docker image
 echo "Building docker"
-docker build --force-rm --build-arg HTTP_PROXY=${HTTP_PROXY} \
-    --build-arg HTTPS_PROXY=${HTTPS_PROXY} \
-    --build-arg http_proxy=${http_proxy} \
-    -t ${TARGET_NAME} -f ${SCRIPT_DIR}/Dockerfile .lbtmp
+docker build --force-rm -t ${TARGET_NAME} -f ${SCRIPT_DIR}/Dockerfile .lbtmp
 
 rm -fr .lbtmp

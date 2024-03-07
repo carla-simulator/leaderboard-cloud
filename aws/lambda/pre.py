@@ -10,17 +10,16 @@ import botocore.exceptions
 EVALAI_SECRET_NAME = "staging-evalai"  # "evalai"
 EVALAI_TRACKS_SECRET_NAME = "staging-evalai-tracks"  # "evalai-tracks"
 
-manager = urllib3.PoolManager()
+pool_manager = urllib3.PoolManager()
 
-session = boto3.session.Session()
-client = session.client(
-    service_name="secretsmanager",
-)
+# aws resources
+secretsmanager = boto3.client("secretsmanager")
+dynamodb = boto3.resource("dynamodb")
 
 
 def get_secret(secret_id):
     try:
-        response = client.get_secret_value(SecretId=secret_id)
+        response = secretsmanager.get_secret_value(SecretId=secret_id)
     except botocore.exceptions.ClientError as e:
         raise e
     else:
@@ -28,8 +27,33 @@ def get_secret(secret_id):
             secret = response["SecretString"]
         else:
             secret = base64.b64decode(response["SecretBinary"])
-        return json.loads(secret)
 
+        secret = json.loads(secret)
+
+        # detect string list (string separated by commas)
+        for k, v in secret.items():
+            if "," in v:
+                secret[k] = {str(item.split(":")[0]):str(item.split(":")[1]) for item in v.split(",")}
+
+        return secret
+
+def is_team_allowed_to_apply(submission_data):
+    if float(submission_data["qualifier"]["threshold"]) <= 0.0:
+        # always allow if not qualifier threshold is specified (i.e, qualifying disabled)
+        return True
+
+    if bool(submission_data["qualifier"]["is_qualifying"]):
+        # always allow to apply to qualifier tracks
+        return True
+
+    qualifier_table = dynamodb.Table(submission_data["aws"]["dynamodb_qualifier_table"])
+    response = qualifier_table.get_item(Key={
+        "team_id": submission_data["submission"]["team_id"],
+        "track_codename": submission_data["qualifier"]["qualifying_to"]
+    })["Item"]
+    is_allowed = True if response else False
+
+    return is_allowed
 
 def lambda_handler(event, context):
 
@@ -37,7 +61,7 @@ def lambda_handler(event, context):
 
     submission_data = {}
     try:
-        submission_data = json.loads(manager.request(
+        submission_data = json.loads(pool_manager.request(
             method="GET",
             url="{0}{1}{2}".format(evalai_secrets["api_server"], "/api/jobs/submission/", str(event["submission_pk"])),
             headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"])},
@@ -45,17 +69,18 @@ def lambda_handler(event, context):
     except:
         pass
 
-    # TODO: add to cluster secrets parallelization parameters
     track_secrets = get_secret(secret_id=EVALAI_TRACKS_SECRET_NAME)
-    cluster_id, track_codename = track_secrets[str(event["phase_pk"])].rsplit("-", 1)
+    cluster_id, track_codename = track_secrets[str(event["phase_pk"])].split(":", 1)
     cluster_secrets = get_secret(secret_id=cluster_id)
- 
-    out_ = {
+
+    data = {
         "cluster": {
             "id": cluster_id,
             "name": cluster_secrets["name"],
             "endpoint": cluster_secrets["endpoint"],
             "certificate_authority": cluster_secrets["certificate_authority"],
+            "instance_type": cluster_secrets["instance_type"][track_codename],
+            "parallelization_workers": cluster_secrets["parallelization_workers"][track_codename],
             "simulator_image": cluster_secrets["simulator_image"],
             "leaderboard_image": cluster_secrets["leaderboard_image"],
             "uploader_image": cluster_secrets["uploader_image"],
@@ -70,40 +95,43 @@ def lambda_handler(event, context):
             "track_id": str(event["phase_pk"]),
             "track_codename": track_codename.upper(),
             "resume": "1" if str(submission_data.get("status", "")).upper() == "RESUMING" else "",
-            "submitted_image_uri": str(event["submitted_image_uri"])
+            "submitted_image_uri": str(event["submitted_image_uri"]),
         },
-        "parallelization": {
-            "gpus": cluster_secrets.get("parallelization_gpus", "1"),
-            "workers": cluster_secrets.get("parallelization_workers", "4")
+        "qualifier": {
+            "is_qualifying": "1" if "qualifier" in track_codename else "0",
+            "qualifying_to": track_codename.split("_")[0].upper() if "qualifier" in track_codename else "",
+            "threshold": cluster_secrets["qualifier_threshold"]
         },
         "aws": {
             "s3_bucket": cluster_secrets["s3_bucket"],
             "dynamodb_submissions_table": cluster_secrets["dynamodb_submissions_table"],
+            "dyanmodb_qualifier_table": cluster_secrets["dynamodb_qualifier_table"]
         },
         "evalai": {
             "auth_token": evalai_secrets["auth_token"],
             "api_server": evalai_secrets["api_server"]
         },
         "results": {},
-        "is_eligible": True
     }
 
     # add submission to database
     # TODO: Add submission parallelization parameters?
     # What happens if the submission is resuming
-    dynamodb = boto3.resource('dynamodb')
-    submissions_table = dynamodb.Table(out_["aws"]["dynamodb_submissions_table"])
+    submissions_table = dynamodb.Table(data["aws"]["dynamodb_submissions_table"])
     submissions_table.put_item(Item={
-        "submission_id": out_["submission"]["submission_id"],
-        "team_id": out_["submission"]["team_id"],
-        "team_name": out_["submission"]["team_name"],
-        "submission_status": out_["submission"]["submission_status"],
-        "track_id": out_["submission"]["track_id"],
-        "track_name": out_["submission"]["track_codename"],
-        "submitted_image_uri": out_["submission"]["submitted_image_uri"],
+        "submission_id": data["submission"]["submission_id"],
+        "team_id": data["submission"]["team_id"],
+        "team_name": data["submission"]["team_name"],
+        "submission_status": data["submission"]["submission_status"],
+        "track_id": data["submission"]["track_id"],
+        "track_name": data["submission"]["track_codename"],
+        "submitted_image_uri": data["submission"]["submitted_image_uri"],
         "submitted_time": f"{datetime.datetime.now().strftime('%Y-%m-%d %T%Z')} {time.tzname[time.daylight]}",
         "start_time": "-",
         "end_time": "-"
     })
 
-    return out_
+    return {
+        "is_eligible": is_team_allowed_to_apply(data),
+        "data": data
+    }

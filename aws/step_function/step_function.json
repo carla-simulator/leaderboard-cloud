@@ -72,7 +72,7 @@
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.cluster.id",
+                  "Variable": "$.data.cluster.id",
                   "StringEquals": "leaderboard-10",
                   "Next": "Map L1"
                 }
@@ -89,16 +89,16 @@
                 "States": {
                   "EKS RunJob Stack L1": {
                     "Type": "Task",
-                    "Resource": "arn:aws:states:::eks:runJob",
+                    "Resource": "arn:aws:states:::eks:runJob.sync",
                     "Parameters": {
-                      "ClusterName.$": "$.cluster.name",
-                      "CertificateAuthority.$": "$.cluster.certificate_authority",
-                      "Endpoint.$": "$.cluster.endpoint",
+                      "ClusterName.$": "$.data.cluster.name",
+                      "CertificateAuthority.$": "$.data.cluster.certificate_authority",
+                      "Endpoint.$": "$.data.cluster.endpoint",
                       "Job": {
                         "apiVersion": "batch/v1",
                         "kind": "Job",
                         "metadata": {
-                          "name.$": "$.submission.name"
+                          "name.$": "$.data.submission.name"
                         },
                         "spec": {
                           "backoffLimit": 2,
@@ -106,12 +106,12 @@
                             "spec": {
                               "serviceAccountName": "submission-worker",
                               "nodeSelector": {
-                                "node.kubernetes.io/instance-type": "g5.12xlarge"
+                                "node.kubernetes.io/instance-type": "$.data.cluster.instance_type"
                               },
                               "initContainers": [
                                 {
                                   "name": "private-contents",
-                                  "image.$": "$.cluster.leaderboard_image",
+                                  "image.$": "$.data.cluster.leaderboard_image",
                                   "command": [
                                     "/bin/bash",
                                     "-c"
@@ -122,15 +122,15 @@
                                   "env": [
                                     {
                                       "name": "SUBMISSION_ID",
-                                      "value.$": "$.submission.submission_id"
+                                      "value.$": "$.data.submission.submission_id"
                                     },
                                     {
                                       "name": "RESUME",
-                                      "value.$": "$.submission.resume"
+                                      "value.$": "$.data.submission.resume"
                                     },
                                     {
                                       "name": "S3_BUCKET",
-                                      "value.$": "$.aws.s3_bucket"
+                                      "value.$": "$.data.aws.s3_bucket"
                                     }
                                   ],
                                   "volumeMounts": [
@@ -165,7 +165,7 @@
                               "containers": [
                                 {
                                   "name": "simulator",
-                                  "image.$": "$.cluster.simulator_image",
+                                  "image.$": "$.data.cluster.simulator_image",
                                   "command": [
                                     "/bin/bash",
                                     "-c"
@@ -176,7 +176,7 @@
                                   "env": [
                                     {
                                       "name": "WORKER_ID",
-                                      "value.$": "$.parallelization.worker_id"
+                                      "value.$": "$.data.parallelization.worker_id"
                                     }
                                   ],
                                   "volumeMounts": [
@@ -198,7 +198,7 @@
                                 },
                                 {
                                   "name": "agent",
-                                  "image.$": "$.submission.submitted_image_uri",
+                                  "image.$": "$.data.submission.submitted_image_uri",
                                   "command": [
                                     "/bin/bash",
                                     "-c"
@@ -209,23 +209,15 @@
                                   "env": [
                                     {
                                       "name": "WORKER_ID",
-                                      "value.$": "$.parallelization.worker_id"
+                                      "value.$": "$.data.parallelization.worker_id"
                                     },
                                     {
                                       "name": "CHALLENGE_TRACK_CODENAME",
-                                      "value.$": "$.submission.track_codename"
+                                      "value.$": "$.data.submission.track_codename"
                                     },
                                     {
                                       "name": "ROUTES_SUBSET",
-                                      "value.$": "$.submission.subset"
-                                    },
-                                    {
-                                      "name": "ROUTES",
-                                      "value": "/workspace/leaderboard/data/routes_testing.xml"
-                                    },
-                                    {
-                                      "name": "SCENARIOS",
-                                      "value": "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
+                                      "value.$": "$.data.submission.subset"
                                     },
                                     {
                                       "name": "REPETITIONS",
@@ -233,7 +225,7 @@
                                     },
                                     {
                                       "name": "RESUME",
-                                      "value.$": "$.submission.resume"
+                                      "value.$": "$.data.submission.resume"
                                     }
                                   ],
                                   "volumeMounts": [
@@ -267,7 +259,7 @@
                                 },
                                 {
                                   "name": "aws-uploader",
-                                  "image.$": "$.cluster.uploader_image",
+                                  "image.$": "$.data.cluster.uploader_image",
                                   "command": [
                                     "/bin/bash",
                                     "-c"
@@ -278,15 +270,15 @@
                                   "env": [
                                     {
                                       "name": "WORKER_ID",
-                                      "value.$": "$.parallelization.worker_id"
+                                      "value.$": "$.data.parallelization.worker_id"
                                     },
                                     {
                                       "name": "SUBMISSION_ID",
-                                      "value.$": "$.submission.submission_id"
+                                      "value.$": "$.data.submission.submission_id"
                                     },
                                     {
                                       "name": "S3_BUCKET",
-                                      "value.$": "$.aws.s3_bucket"
+                                      "value.$": "$.data.aws.s3_bucket"
                                     }
                                   ],
                                   "volumeMounts": [
@@ -325,17 +317,18 @@
                         }
                       }
                     },
-                    "Next": "EKS RemoveJob Stack L1"
+                    "Next": "EKS RemoveJob Stack L1",
+                    "ResultPath": null
                   },
                   "EKS RemoveJob Stack L1": {
                     "Type": "Task",
                     "Resource": "arn:aws:states:::eks:call",
                     "Parameters": {
-                      "ClusterName.$": "$.cluster.name",
-                      "CertificateAuthority.$": "$.cluster.certificate_authority",
-                      "Endpoint.$": "$.cluster.endpoint",
+                      "ClusterName.$": "$.data.cluster.name",
+                      "CertificateAuthority.$": "$.data.cluster.certificate_authority",
+                      "Endpoint.$": "$.data.cluster.endpoint",
                       "Method": "DELETE",
-                      "Path.$": "States.Format('/apis/batch/v1/namespaces/default/jobs/{}', $.submission.name)",
+                      "Path.$": "States.Format('/apis/batch/v1/namespaces/default/jobs/{}', $.data.submission.name)",
                       "QueryParameters": {
                         "propagationPolicy": [
                           "Foreground"
@@ -361,14 +354,14 @@
                     "Type": "Task",
                     "Resource": "arn:aws:states:::eks:runJob.sync",
                     "Parameters": {
-                      "ClusterName.$": "$.cluster.name",
-                      "CertificateAuthority.$": "$.cluster.certificate_authority",
-                      "Endpoint.$": "$.cluster.endpoint",
+                      "ClusterName.$": "$.data.cluster.name",
+                      "CertificateAuthority.$": "$.data.cluster.certificate_authority",
+                      "Endpoint.$": "$.data.cluster.endpoint",
                       "Job": {
                         "apiVersion": "batch/v1",
                         "kind": "Job",
                         "metadata": {
-                          "name.$": "$.submission.name"
+                          "name.$": "$.data.submission.name"
                         },
                         "spec": {
                           "backoffLimit": 2,
@@ -376,12 +369,12 @@
                             "spec": {
                               "serviceAccountName": "submission-worker",
                               "nodeSelector": {
-                                "node.kubernetes.io/instance-type": "g5.12xlarge"
+                                "node.kubernetes.io/instance-type": "$.data.cluster.instance_type"
                               },
                               "initContainers": [
                                 {
                                   "name": "private-contents",
-                                  "image.$": "$.cluster.leaderboard_image",
+                                  "image.$": "$.data.cluster.leaderboard_image",
                                   "command": [
                                     "/bin/bash",
                                     "-c"
@@ -392,15 +385,15 @@
                                   "env": [
                                     {
                                       "name": "SUBMISSION_ID",
-                                      "value.$": "$.submission.submission_id"
+                                      "value.$": "$.data.submission.submission_id"
                                     },
                                     {
                                       "name": "RESUME",
-                                      "value.$": "$.submission.resume"
+                                      "value.$": "$.data.submission.resume"
                                     },
                                     {
                                       "name": "S3_BUCKET",
-                                      "value.$": "$.aws.s3_bucket"
+                                      "value.$": "$.data.aws.s3_bucket"
                                     }
                                   ],
                                   "volumeMounts": [
@@ -435,7 +428,7 @@
                               "containers": [
                                 {
                                   "name": "simulator",
-                                  "image.$": "$.cluster.simulator_image",
+                                  "image.$": "$.data.cluster.simulator_image",
                                   "command": [
                                     "/bin/bash",
                                     "-c"
@@ -446,7 +439,7 @@
                                   "env": [
                                     {
                                       "name": "WORKER_ID",
-                                      "value.$": "$.parallelization.worker_id"
+                                      "value.$": "$.data.parallelization.worker_id"
                                     },
                                     {
                                       "name": "DISPLAY",
@@ -476,7 +469,7 @@
                                 },
                                 {
                                   "name": "agent",
-                                  "image.$": "$.submission.submitted_image_uri",
+                                  "image.$": "$.data.submission.submitted_image_uri",
                                   "command": [
                                     "/bin/bash",
                                     "-c"
@@ -487,19 +480,15 @@
                                   "env": [
                                     {
                                       "name": "WORKER_ID",
-                                      "value.$": "$.parallelization.worker_id"
+                                      "value.$": "$.data.parallelization.worker_id"
                                     },
                                     {
                                       "name": "CHALLENGE_TRACK_CODENAME",
-                                      "value.$": "$.submission.track_codename"
+                                      "value.$": "$.data.submission.track_codename"
                                     },
                                     {
                                       "name": "ROUTES_SUBSET",
-                                      "value.$": "$.submission.subset"
-                                    },
-                                    {
-                                      "name": "ROUTES",
-                                      "value": "/workspace/leaderboard/data/routes_testing.xml"
+                                      "value.$": "$.data.submission.subset"
                                     },
                                     {
                                       "name": "REPETITIONS",
@@ -507,7 +496,7 @@
                                     },
                                     {
                                       "name": "RESUME",
-                                      "value.$": "$.submission.resume"
+                                      "value.$": "$.data.submission.resume"
                                     }
                                   ],
                                   "volumeMounts": [
@@ -541,7 +530,7 @@
                                 },
                                 {
                                   "name": "aws-uploader",
-                                  "image.$": "$.cluster.uploader_image",
+                                  "image.$": "$.data.cluster.uploader_image",
                                   "command": [
                                     "/bin/bash",
                                     "-c"
@@ -552,15 +541,15 @@
                                   "env": [
                                     {
                                       "name": "WORKER_ID",
-                                      "value.$": "$.parallelization.worker_id"
+                                      "value.$": "$.data.parallelization.worker_id"
                                     },
                                     {
                                       "name": "SUBMISSION_ID",
-                                      "value.$": "$.submission.submission_id"
+                                      "value.$": "$.data.submission.submission_id"
                                     },
                                     {
                                       "name": "S3_BUCKET",
-                                      "value.$": "$.aws.s3_bucket"
+                                      "value.$": "$.data.aws.s3_bucket"
                                     }
                                   ],
                                   "volumeMounts": [
@@ -612,11 +601,11 @@
                     "Type": "Task",
                     "Resource": "arn:aws:states:::eks:call",
                     "Parameters": {
-                      "ClusterName.$": "$.cluster.name",
-                      "CertificateAuthority.$": "$.cluster.certificate_authority",
-                      "Endpoint.$": "$.cluster.endpoint",
+                      "ClusterName.$": "$.data.cluster.name",
+                      "CertificateAuthority.$": "$.data.cluster.certificate_authority",
+                      "Endpoint.$": "$.data.cluster.endpoint",
                       "Method": "DELETE",
-                      "Path.$": "States.Format('/apis/batch/v1/namespaces/default/jobs/{}', $.submission.name)",
+                      "Path.$": "States.Format('/apis/batch/v1/namespaces/default/jobs/{}', $.data.submission.name)",
                       "QueryParameters": {
                         "propagationPolicy": [
                           "Foreground"
@@ -664,14 +653,14 @@
               "Type": "Task",
               "Resource": "arn:aws:states:::eks:runJob.sync",
               "Parameters": {
-                "ClusterName.$": "$.cluster.name",
-                "CertificateAuthority.$": "$.cluster.certificate_authority",
-                "Endpoint.$": "$.cluster.endpoint",
+                "ClusterName.$": "$.data.cluster.name",
+                "CertificateAuthority.$": "$.data.cluster.certificate_authority",
+                "Endpoint.$": "$.data.cluster.endpoint",
                 "Job": {
                   "apiVersion": "batch/v1",
                   "kind": "Job",
                   "metadata": {
-                    "name.$": "$.submission.name"
+                    "name.$": "$.data.submission.name"
                   },
                   "spec": {
                     "backoffLimit": 8,
@@ -679,12 +668,12 @@
                       "spec": {
                         "serviceAccountName": "submission-worker",
                         "nodeSelector": {
-                          "node.kubernetes.io/instance-type": "g5.12xlarge"
+                          "node.kubernetes.io/instance-type": "$.data.cluster.instance_type"
                         },
                         "initContainers": [
                           {
                             "name": "private-contents",
-                            "image.$": "$.cluster.leaderboard_image",
+                            "image.$": "$.data.cluster.leaderboard_image",
                             "command": [
                               "/bin/bash",
                               "-c"
@@ -707,7 +696,7 @@
                         "containers": [
                           {
                             "name": "monitor",
-                            "image.$": "$.cluster.monitor_image",
+                            "image.$": "$.data.cluster.monitor_image",
                             "command": [
                               "/bin/bash",
                               "-c"
@@ -718,39 +707,39 @@
                             "env": [
                               {
                                 "name": "SUBMISSION_ID",
-                                "value.$": "$.submission.submission_id"
+                                "value.$": "$.data.submission.submission_id"
                               },
                               {
                                 "name": "SUBMISSION_WORKERS",
-                                "value.$": "$.parallelization.workers"
+                                "value.$": "$.data.parallelization.workers"
                               },
                               {
                                 "name": "CHALLENGE_ID",
-                                "value.$": "$.submission.challenge_id"
+                                "value.$": "$.data.submission.challenge_id"
                               },
                               {
                                 "name": "TRACK_ID",
-                                "value.$": "$.submission.track_id"
+                                "value.$": "$.data.submission.track_id"
                               },
                               {
                                 "name": "TEAM_ID",
-                                "value.$": "$.submission.team_id"
+                                "value.$": "$.data.submission.team_id"
                               },
                               {
                                 "name": "S3_BUCKET",
-                                "value.$": "$.aws.s3_bucket"
+                                "value.$": "$.data.aws.s3_bucket"
                               },
                               {
                                 "name": "DYNAMODB_SUBMISSIONS_TABLE",
-                                "value.$": "$.aws.dynamodb_submissions_table"
+                                "value.$": "$.data.aws.dynamodb_submissions_table"
                               },
                               {
                                 "name": "EVALAI_AUTH_TOKEN",
-                                "value.$": "$.evalai.auth_token"
+                                "value.$": "$.data.evalai.auth_token"
                               },
                               {
                                 "name": "EVALAI_API_SERVER",
-                                "value.$": "$.evalai.api_server"
+                                "value.$": "$.data.evalai.api_server"
                               }
                             ],
                             "volumeMounts": [
@@ -788,11 +777,11 @@
               "Type": "Task",
               "Resource": "arn:aws:states:::eks:call",
               "Parameters": {
-                "ClusterName.$": "$.cluster.name",
-                "CertificateAuthority.$": "$.cluster.certificate_authority",
-                "Endpoint.$": "$.cluster.endpoint",
+                "ClusterName.$": "$.data.cluster.name",
+                "CertificateAuthority.$": "$.data.cluster.certificate_authority",
+                "Endpoint.$": "$.data.cluster.endpoint",
                 "Method": "DELETE",
-                "Path.$": "States.Format('/apis/batch/v1/namespaces/default/jobs/{}', $.submission.name)",
+                "Path.$": "States.Format('/apis/batch/v1/namespaces/default/jobs/{}', $.data.submission.name)",
                 "QueryParameters": {
                   "propagationPolicy": [
                     "Foreground"

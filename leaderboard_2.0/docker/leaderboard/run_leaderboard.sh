@@ -28,6 +28,9 @@ export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/:${SCENARIO_RUNNER_ROOT}":"${LE
 ############################
 [[ -z "${CHALLENGE_TRACK_CODENAME}" ]]  && export CHALLENGE_TRACK_CODENAME="SENSORS"
 [[ -z "${ROUTES}" ]]                    && export ROUTES="/workspace/leaderboard/data/routes_testing.xml"
+if [[ "$CHALLENGE_TRACK_CODENAME" == *"QUALIFIER"* ]]; then
+  export ROUTES="/workspace/leaderboard/data/routes_qualifier.xml"
+fi
 [[ -z "${REPETITIONS}" ]]               && export REPETITIONS="1"
 [[ -z "${RESUME}" ]]                    && export RESUME=""
 

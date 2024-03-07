@@ -7,9 +7,16 @@ import urllib3
 
 import boto3
 
+# aws resources
+s3 = boto3.resource('s3')
+dynamodb = boto3.resource('dynamodb')
+
 
 def lambda_handler(event, context):
  
+    out = copy.deepcopy(event)
+    is_eligible, submission_data = out["is_eligible"], out["data"]
+
     def read_file_from_s3(bucket, file):
         try:
             obj = s3.Object(bucket, file)
@@ -17,7 +24,6 @@ def lambda_handler(event, context):
         except Exception as e:
             return ""
 
-    s3 = boto3.resource('s3')
     bucket = s3.Bucket(event["aws"]["s3_bucket"])
     objs = list(bucket.objects.filter(Prefix="{}/containers-status".format(event["submission"]["submission_id"])))
     objs_name = [os.path.basename(o.key) for o in objs]
@@ -30,11 +36,11 @@ def lambda_handler(event, context):
     else:
         submission_status = "FAILED"
 
-    submission_data = copy.deepcopy(event)
     submission_data["submission"]["submission_status"] = submission_status
 
     results = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/results.json".format(event["submission"]["submission_id"]))
     stdout = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/stdout.txt".format(event["submission"]["submission_id"]))
+    stderr = "" if is_eligible else "You are not allowed to submit to this track. Please, run the qualifier track first."
     metadata = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/metadata.json".format(event["submission"]["submission_id"]))
 
     if submission_status == "FINISHED":
@@ -42,12 +48,23 @@ def lambda_handler(event, context):
         assert results is not ""
         submission_data["results"] = {k.replace(" ", "_").lower(): str(v) for k,v in json.loads(results)[0]["accuracies"].items()}
 
-    manager = urllib3.PoolManager()
+        # update qualified team
+        if bool(submission_data["qualifier"]["is_qualifying"]) and float(submission_data["results"]["driving_score"]) >= float(submission_data["qualifier"]["threshold"]):
+            # the team is now qualified
+            qualifier_table = dynamodb.Table(submission_data["aws"]["dynamodb_qualifier_table"])
+            qualifier_table.put_item(Item={
+                "team_id": submission_data["submission"]["team_id"],
+                "track_codename": submission_data["qualifier"]["qualifying_to"],
+                "submission_id": submission_data["submission"]["submission_id"]
+            })
+
+
+    pool_manager = urllib3.PoolManager()
     try:
         evalai_status = ""
         retries, MAX_RETRIES = 0, 5
         while submission_status != evalai_status and retries < MAX_RETRIES:
-            out = json.loads(manager.request(
+            out = json.loads(pool_manager.request(
                 method="PUT",
                 url="{}{}{}{}".format(submission_data["evalai"]["api_server"], "/api/jobs/challenge/", event["submission"]["challenge_id"], "/update_submission/"),
                 headers={"Authorization": "Bearer {}".format(submission_data["evalai"]["auth_token"]), "Content-Type": "application/json"},
@@ -57,14 +74,14 @@ def lambda_handler(event, context):
                     "submission_status": submission_data["submission"]["submission_status"],
                     "result": results,
                     "stdout": stdout,
-                    "stderr": "",
+                    "stderr": stderr,
                     "environment_log": "",
                     "metadata": metadata,
                 })
             ).data)
             print(out)
 
-            evalai_status = json.loads(manager.request(
+            evalai_status = json.loads(pool_manager.request(
                 method="GET",
                 url="{0}{1}{2}".format(submission_data["evalai"]["api_server"], "/api/jobs/submission/", event["submission"]["submission_id"]),
                 headers={"Authorization": "Bearer {}".format(submission_data["evalai"]["auth_token"])},
@@ -77,7 +94,6 @@ def lambda_handler(event, context):
         pass
 
     # update submissions in the database
-    dynamodb = boto3.resource('dynamodb')
     submissions_table = dynamodb.Table(submission_data["aws"]["dynamodb_submissions_table"])
     submissions_table.update_item(
         Key={"team_id": submission_data["submission"]["team_id"], "submission_id": submission_data["submission"]["submission_id"]},
