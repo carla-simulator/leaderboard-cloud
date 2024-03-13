@@ -1,18 +1,18 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name.$: $.data.submission.name
+  name.$: $.submission.name
 spec:
   backoffLimit: 8
   template:
     spec:
       serviceAccountName: submission-worker
       nodeSelector:
-        node.kubernetes.io/instance-type: $.data.cluster.instance_type
+        node.kubernetes.io/instance-type.$: $.cluster.instance_type
 
       initContainers:
         - name: private-contents
-          image.$: $.data.cluster.leaderboard_image
+          image.$: $.cluster.leaderboard_image
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -27,30 +27,30 @@ spec:
 
       containers:
         - name: monitor
-          image.$: $.data.cluster.monitor_image
+          image.$: $.cluster.monitor_image
           command: ["/bin/bash", "-c"]
           args:
             - |
               bash /workspace/run_monitor.sh
           env:
             - name: SUBMISSION_ID
-              value.$: $.data.submission.submission_id
+              value.$: $.submission.submission_id
             - name: SUBMISSION_WORKERS
-              value.$: $.data.parallelization.workers
+              value.$: $.cluster.parallelization_workers
             - name: CHALLENGE_ID
-              value.$: $.data.submission.challenge_id
+              value.$: $.submission.challenge_id
             - name: TRACK_ID
-              value.$: $.data.submission.track_id
+              value.$: $.submission.track_id
             - name: TEAM_ID
-              value.$: $.data.submission.team_id
+              value.$: $.submission.team_id
             - name: S3_BUCKET
-              value.$: "$.data.aws.s3_bucket"
+              value.$: "$.aws.s3_bucket"
             - name: DYNAMODB_SUBMISSIONS_TABLE
-              value.$: "$.data.aws.dynamodb_submissions_table"
+              value.$: "$.aws.dynamodb_submissions_table"
             - name: EVALAI_AUTH_TOKEN
-              value.$: "$.data.evalai.auth_token"
+              value.$: "$.evalai.auth_token"
             - name: EVALAI_API_SERVER
-              value.$: "$.data.evalai.api_server"
+              value.$: "$.evalai.api_server"
           volumeMounts:
             - mountPath: /utils/leaderboard
               name: leaderboard

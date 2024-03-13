@@ -127,7 +127,7 @@ while sleep ${MONITOR_PERIOD} ; do
   echo "> Checking end condition"
   pull_from_s3_containers_status
   DONE_FILES=$(find /logs/containers-status -name *.done* | wc -l)
-  TOTAL_DONE_FILES=$((3*$SUBMISSION_WORKER))
+  TOTAL_DONE_FILES=$((3*$SUBMISSION_WORKERS))
   if [ $DONE_FILES -ge $TOTAL_DONE_FILES ]; then
     echo "Detected that all containers have finished. Stopping..."
     touch $MONITOR_DONE_FILE

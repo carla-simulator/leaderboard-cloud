@@ -24,24 +24,24 @@ def lambda_handler(event, context):
         except Exception as e:
             return ""
 
-    bucket = s3.Bucket(event["aws"]["s3_bucket"])
-    objs = list(bucket.objects.filter(Prefix="{}/containers-status".format(event["submission"]["submission_id"])))
+    bucket = s3.Bucket(submission_data["aws"]["s3_bucket"])
+    objs = list(bucket.objects.filter(Prefix="{}/containers-status".format(submission_data["submission"]["submission_id"])))
     objs_name = [os.path.basename(o.key) for o in objs]
     objs_extension = [os.path.splitext(obj_name)[1] for obj_name in objs_name]
 
     if ".cancel" in objs_extension:
         submission_status = "CANCELLED"
-    elif objs_extension.count(".done") == 3 * int(event["parallelization"]["workers"]):  # each job has 3 containers
+    elif objs_extension.count(".done") == 3 * int(submission_data["cluster"]["parallelization_workers"]):  # each job has 3 containers
         submission_status = "FINISHED"
     else:
         submission_status = "FAILED"
 
     submission_data["submission"]["submission_status"] = submission_status
 
-    results = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/results.json".format(event["submission"]["submission_id"]))
-    stdout = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/stdout.txt".format(event["submission"]["submission_id"]))
+    results = read_file_from_s3(submission_data["aws"]["s3_bucket"], "{}/evalai/results.json".format(submission_data["submission"]["submission_id"]))
+    stdout = read_file_from_s3(submission_data["aws"]["s3_bucket"], "{}/evalai/stdout.txt".format(submission_data["submission"]["submission_id"]))
     stderr = "" if is_eligible else "You are not allowed to submit to this track. Please, run the qualifier track first."
-    metadata = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/metadata.json".format(event["submission"]["submission_id"]))
+    metadata = read_file_from_s3(submission_data["aws"]["s3_bucket"], "{}/evalai/metadata.json".format(submission_data["submission"]["submission_id"]))
 
     if submission_status == "FINISHED":
         # extract results
@@ -66,7 +66,7 @@ def lambda_handler(event, context):
         while submission_status != evalai_status and retries < MAX_RETRIES:
             out = json.loads(pool_manager.request(
                 method="PUT",
-                url="{}{}{}{}".format(submission_data["evalai"]["api_server"], "/api/jobs/challenge/", event["submission"]["challenge_id"], "/update_submission/"),
+                url="{}{}{}{}".format(submission_data["evalai"]["api_server"], "/api/jobs/challenge/", submission_data["submission"]["challenge_id"], "/update_submission/"),
                 headers={"Authorization": "Bearer {}".format(submission_data["evalai"]["auth_token"]), "Content-Type": "application/json"},
                 body=json.dumps({
                     "submission": submission_data["submission"]["submission_id"],
@@ -83,7 +83,7 @@ def lambda_handler(event, context):
 
             evalai_status = json.loads(pool_manager.request(
                 method="GET",
-                url="{0}{1}{2}".format(submission_data["evalai"]["api_server"], "/api/jobs/submission/", event["submission"]["submission_id"]),
+                url="{0}{1}{2}".format(submission_data["evalai"]["api_server"], "/api/jobs/submission/", submission_data["submission"]["submission_id"]),
                 headers={"Authorization": "Bearer {}".format(submission_data["evalai"]["auth_token"])},
             ).data).get("status", "").upper()
             retries += 1

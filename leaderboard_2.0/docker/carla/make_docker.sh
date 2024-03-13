@@ -43,6 +43,7 @@ cp ${SCRIPT_DIR}/run_carla.sh ${CARLA_ROOT}
 
 # Build docker image
 echo "Building CARLA docker"
+echo "Using CARLA version: ${CARLA_ROOT}"
 docker build --force-rm \
     -t ${TARGET_NAME} \
     -f ${SCRIPT_DIR}/Dockerfile ${CARLA_ROOT}

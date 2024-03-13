@@ -1,18 +1,18 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name.$: $.data.submission.name
+  name.$: $.submission.name
 spec:
   backoffLimit: 2
   template:
     spec:
       serviceAccountName: submission-worker
       nodeSelector:
-        node.kubernetes.io/instance-type: $.data.cluster.instance_type
+        node.kubernetes.io/instance-type.$: $.cluster.instance_type
 
       initContainers:
         - name: private-contents
-          image.$: $.data.cluster.leaderboard_image
+          image.$: $.cluster.leaderboard_image
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -38,11 +38,11 @@ spec:
               bash /tmp/gpu_utils/get_gpu_uuid.sh > /tmp/gpu_utils/gpu.txt
           env:
             - name: SUBMISSION_ID
-              value.$: $.data.submission.submission_id
+              value.$: $.submission.submission_id
             - name: RESUME
-              value.$: $.data.submission.resume
+              value.$: $.submission.resume
             - name: S3_BUCKET
-              value.$: "$.data.aws.s3_bucket"
+              value.$: "$.aws.s3_bucket"
           volumeMounts:
             - mountPath: /tmp/leaderboard
               name: leaderboard
@@ -61,7 +61,7 @@ spec:
       containers:
         
         - name: simulator
-          image.$: $.data.cluster.simulator_image
+          image.$: $.cluster.simulator_image
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -69,7 +69,7 @@ spec:
               bash /home/carla/run_carla.sh
           env:
             - name: WORKER_ID
-              value.$: $.data.parallelization.worker_id
+              value.$: $.parallelization.worker_id
             - name: DISPLAY
               value: ":0"
           volumeMounts:
@@ -85,7 +85,7 @@ spec:
               subPath: containers-status
 
         - name: agent
-          image.$: $.data.submission.submitted_image_uri
+          image.$: $.submission.submitted_image_uri
           command: ["/bin/bash", "-c"]
           args:
             - |
@@ -93,15 +93,15 @@ spec:
               bash /workspace/leaderboard/run_leaderboard.sh
           env:
             - name: WORKER_ID
-              value.$: $.data.parallelization.worker_id
+              value.$: $.parallelization.worker_id
             - name: CHALLENGE_TRACK_CODENAME
-              value.$: $.data.submission.track_codename
+              value.$: $.submission.track_codename
             - name: ROUTES_SUBSET
-              value.$: $.data.submission.subset
+              value.$: $.submission.subset
             - name: REPETITIONS
               value: "1"
             - name: RESUME
-              value.$: $.data.submission.resume
+              value.$: $.submission.resume
           volumeMounts:
             - mountPath: /workspace/leaderboard
               name: leaderboard
@@ -119,18 +119,18 @@ spec:
               subPath: containers-status
 
         - name: aws-uploader
-          image.$: $.data.cluster.uploader_image
+          image.$: $.cluster.uploader_image
           command: ["/bin/bash", "-c"]
           args:
             - |
               bash /workspace/run_uploader.sh
           env:
             - name: WORKER_ID
-              value.$: $.data.parallelization.worker_id
+              value.$: $.parallelization.worker_id
             - name: SUBMISSION_ID
-              value.$: $.data.submission.submission_id
+              value.$: $.submission.submission_id
             - name: S3_BUCKET
-              value.$: "$.data.aws.s3_bucket"
+              value.$: "$.aws.s3_bucket"
           volumeMounts:
             - mountPath: /logs
               name: logs

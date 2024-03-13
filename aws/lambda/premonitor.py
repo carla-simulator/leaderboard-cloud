@@ -3,15 +3,14 @@
 def lambda_handler(event, context):
 
     return {
-        "cluster": event["cluster"],
+        "cluster": event["data"]["cluster"],
         "submission": {
-            "submission_id": event["submission"]["submission_id"],
-            "name": "monitor-{}".format(event["submission"]["submission_id"]),
-            "challenge_id": event["submission"]["challenge_id"],
-            "team_id": event["submission"]["team_id"],
-            "track_id": event["submission"]["track_id"],
+            "submission_id": event["data"]["submission"]["submission_id"],
+            "name": "monitor-{}".format(event["data"]["submission"]["submission_id"]),
+            "challenge_id": event["data"]["submission"]["challenge_id"],
+            "team_id": event["data"]["submission"]["team_id"],
+            "track_id": event["data"]["submission"]["track_id"],
         },
-        "parallelization": event["parallelization"],
-        "aws": event["aws"],
-        "evalai": event["evalai"]
+        "aws": event["data"]["aws"],
+        "evalai": event["data"]["evalai"]
     }

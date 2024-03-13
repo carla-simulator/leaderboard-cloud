@@ -13,22 +13,24 @@ def lambda_handler(event, context):
     out_ = []
     for worker_id, subset in enumerate(routes_subset):
         out_.append({
-            "cluster": event["cluster"],
+            "cluster": event["data"]["cluster"],
             "submission": {
-                "submission_id": event["submission"]["submission_id"],
-                "name": "submission-{}-{}".format(event["submission"]["submission_id"], worker_id + 1),
-                "resume": event["submission"]["resume"],
-                "submitted_image_uri": event["submission"]["submitted_image_uri"],
-                "track_codename": event["submission"]["track_codename"],
+                "submission_id": event["data"]["submission"]["submission_id"],
+                "name": "submission-{}-{}".format(event["data"]["submission"]["submission_id"], worker_id + 1),
+                "resume": event["data"]["submission"]["resume"],
+                "submitted_image_uri": event["data"]["submission"]["submitted_image_uri"],
+                "track_codename": event["data"]["submission"]["track_codename"],
                 "subset": subset
             },
             "parallelization": {
                 "worker_id": str(worker_id + 1),
-                "gpus": event["parallelization"]["gpus"] 
             },
             "aws": {
-                "s3_bucket": event["aws"]["s3_bucket"],
+                "s3_bucket": event["data"]["aws"]["s3_bucket"],
             }
         })
 
-    return out_
+    return {
+        "cluster_id": event["data"]["cluster"]["id"],
+        "map": out_
+    }

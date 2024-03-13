@@ -33,7 +33,7 @@ def get_secret(secret_id):
         # detect string list (string separated by commas)
         for k, v in secret.items():
             if "," in v:
-                secret[k] = {str(item.split(":")[0]):str(item.split(":")[1]) for item in v.split(",")}
+                secret[k] = {str(item.split(":")[0]).strip():str(item.split(":")[1]).strip() for item in v.split(",")}
 
         return secret
 
@@ -98,8 +98,8 @@ def lambda_handler(event, context):
             "submitted_image_uri": str(event["submitted_image_uri"]),
         },
         "qualifier": {
-            "is_qualifying": "1" if "qualifier" in track_codename else "0",
-            "qualifying_to": track_codename.split("_")[0].upper() if "qualifier" in track_codename else "",
+            "is_qualifying": "1" if cluster_secrets["qualifier_map"] and track_codename in cluster_secrets["qualifier_map"] else "0",
+            "qualifying_to": cluster_secrets["qualifier_map"].get(track_codename, "").upper() if cluster_secrets["qualifier_map"] else "",
             "threshold": cluster_secrets["qualifier_threshold"]
         },
         "aws": {
@@ -126,6 +126,7 @@ def lambda_handler(event, context):
         "track_id": data["submission"]["track_id"],
         "track_name": data["submission"]["track_codename"],
         "submitted_image_uri": data["submission"]["submitted_image_uri"],
+        "parallelization_workers": data["cluster"]["parallelization_workers"],
         "submitted_time": f"{datetime.datetime.now().strftime('%Y-%m-%d %T%Z')} {time.tzname[time.daylight]}",
         "start_time": "-",
         "end_time": "-"

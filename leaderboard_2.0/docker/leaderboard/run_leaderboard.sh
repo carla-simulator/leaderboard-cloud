@@ -27,7 +27,7 @@ export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/:${SCENARIO_RUNNER_ROOT}":"${LE
 ## LEADERBOARD PARAMETERS ##
 ############################
 [[ -z "${CHALLENGE_TRACK_CODENAME}" ]]  && export CHALLENGE_TRACK_CODENAME="SENSORS"
-[[ -z "${ROUTES}" ]]                    && export ROUTES="/workspace/leaderboard/data/routes_testing.xml"
+export ROUTES="/workspace/leaderboard/data/routes_testing.xml"
 if [[ "$CHALLENGE_TRACK_CODENAME" == *"QUALIFIER"* ]]; then
   export ROUTES="/workspace/leaderboard/data/routes_qualifier.xml"
 fi
