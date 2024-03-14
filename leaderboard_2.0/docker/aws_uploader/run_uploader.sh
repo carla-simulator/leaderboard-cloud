@@ -5,7 +5,7 @@
 #######################
 ID="$WORKER_ID"
 
-UPLOADER_LOGS="/logs/uploader/uploader-$ID.log"
+UPLOADER_LOGS="/logs/logs/uploader-$ID.log"
 UPLOADER_DONE_FILE="/logs/containers-status/uploader-$ID.done"
 
 SIMULATION_CANCEL_FILE="/logs/containers-status/simulation-$ID.cancel"
@@ -34,7 +34,7 @@ while sleep ${UPLOADER_PERIOD} ; do
   push_to_s3
 
   echo "> Checking if the submission has been cancelled"
-  aws s3api head-object --bucket ${S3_BUCKET} --key ${SUBMISSION_ID}/monitor/simulation.cancel > /dev/null 2>&1 && SIMULATION_CANCELLED=true
+  aws s3api head-object --bucket ${S3_BUCKET} --key ${SUBMISSION_ID}/containers-status/simulation.cancel > /dev/null 2>&1 && SIMULATION_CANCELLED=true
   if [ $SIMULATION_CANCELLED ]; then
     echo "Detected that the submission has been cancelled. Stopping..."
     touch $SIMULATION_CANCEL_FILE

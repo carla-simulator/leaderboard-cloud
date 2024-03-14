@@ -95,7 +95,7 @@ def lambda_handler(event, context):
             "track_id": str(event["phase_pk"]),
             "track_codename": track_codename.upper(),
             "resume": "1" if str(submission_data.get("status", "")).upper() == "RESUMING" else "",
-            "routes": submission_data["routes"][track_codename],
+            "routes": cluster_secrets["routes"][track_codename],
             "submitted_image_uri": str(event["submitted_image_uri"]),
         },
         "qualifier": {

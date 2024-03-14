@@ -3,7 +3,7 @@ kind: Job
 metadata:
   name.$: $.submission.name
 spec:
-  backoffLimit: 2
+  backoffLimit: 0
   template:
     spec:
       serviceAccountName: submission-worker
@@ -23,10 +23,11 @@ spec:
 
               if [ -z $RESUME ]; then
                 echo "Detected a normal run, creating log files"
-                mkdir -m 0777 -p /tmp/logs/agent
-                mkdir -m 0777 -p /tmp/logs/simulator
-                mkdir -m 0777 -p /tmp/logs/uploader
+                mkdir -m 0777 -p /tmp/logs/logs
                 mkdir -m 0777 -p /tmp/logs/containers-status
+                mkdir -m 0777 -p /tmp/logs/agent
+                mkdir -m 0777 -p /tmp/logs/recorder
+                mkdir -m 0777 -p /tmp/logs/evalai
               else
                 echo "Detected a resume, download log files from S3, and removing the container status data"
                 #Descargar solo el merge results.json y ponerlo en /tmp/logs/agent?
@@ -77,9 +78,12 @@ spec:
               name: x11
             - mountPath: /gpu
               name: gpu-utils
-            - mountPath: /home/carla/CarlaUE4/Saved
+            - mountPath: /tmp/logs
               name: logs
-              subPath: simulator
+              subPath: logs
+            - mountPath: /home/carla/recorder
+              name: logs
+              subPath: recorder
             - mountPath: /tmp/status
               name: logs
               subPath: containers-status
@@ -111,6 +115,9 @@ spec:
               name: carla-python-api
             - mountPath: /gpu
               name: gpu-utils
+            - mountPath: /tmp/logs
+              name: logs
+              subPath: logs
             - mountPath: /tmp/agent
               name: logs
               subPath: agent
@@ -135,7 +142,7 @@ spec:
             - mountPath: /logs
               name: logs
 
-      restartPolicy: OnFailure
+      restartPolicy: Never
       volumes:
         - name: leaderboard
           emptyDir: {}

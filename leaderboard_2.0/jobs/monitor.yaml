@@ -3,7 +3,7 @@ kind: Job
 metadata:
   name.$: $.submission.name
 spec:
-  backoffLimit: 8
+  backoffLimit: 0
   template:
     spec:
       serviceAccountName: submission-worker
@@ -19,11 +19,17 @@ spec:
               cp -r ${LEADERBOARD_ROOT}/* /tmp/leaderboard/
               cp -r ${SCENARIO_RUNNER_ROOT}/* /tmp/scenario_runner/
 
+              mkdir -m 0777 -p /tmp/logs/logs
+              mkdir -m 0777 -p /tmp/logs/containers-status
+              mkdir -m 0777 -p /tmp/logs/agent
+              mkdir -m 0777 -p /tmp/logs/evalai
           volumeMounts:
             - mountPath: /tmp/leaderboard
               name: leaderboard
             - mountPath: /tmp/scenario_runner
               name: scenario-runner
+            - mountPath: /tmp/logs
+              name: logs
 
       containers:
         - name: monitor
@@ -56,9 +62,14 @@ spec:
               name: leaderboard
             - mountPath: /utils/scenario_runner
               name: scenario-runner
-      restartPolicy: OnFailure
+            - mountPath: /logs
+              name: logs
+      restartPolicy: Never
       volumes:
         - name: leaderboard
           emptyDir: {}
         - name: scenario-runner
           emptyDir: {}
+        - name: logs
+          emptyDir: {}
+

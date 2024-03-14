@@ -3,15 +3,14 @@
 # Get the file names of this attempt
 ID="$WORKER_ID"
 CRASH_ID=$(find /tmp/status -name *agent-$ID.crash* | wc -l)
+AGENT_LOGS="/tmp/logs/agent-$ID.log"
 AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$CRASH_ID"
 AGENT_DONE_FILE="/tmp/status/agent-$ID.done"
 SIMULATOR_CRASH_FILE="/tmp/status/simulator-$ID.crash$CRASH_ID"
 SIMULATOR_DONE_FILE="/tmp/status/simulator-$ID.done"
 SIMULATION_CANCEL_FILE="/tmp/status/simulation-$ID.cancel"
 
-AGENT_FOLDER="/tmp/agent/agent$ID" && mkdir -p $AGENT_FOLDER
-LEADERBOARD_LOGS="$AGENT_FOLDER/leaderboard.log"
-AGENT_RESULTS="$AGENT_FOLDER/agent_results.json"
+AGENT_RESULTS="/tmp/agent/partial_agent_results$ID.json"
 
 MAX_IDLE=800
 
@@ -21,7 +20,7 @@ MAX_IDLE=800
 export CARLA_ROOT="/workspace/CARLA"
 export SCENARIO_RUNNER_ROOT="/workspace/scenario_runner"
 export LEADERBOARD_ROOT="/workspace/leaderboard"
-export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/:${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
+export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/dist/$(ls ${CARLA_ROOT}/PythonAPI/carla/dist | grep py3.):${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 
 ############################
 ## LEADERBOARD PARAMETERS ##
@@ -34,8 +33,8 @@ fi
 [[ -z "${REPETITIONS}" ]]               && export REPETITIONS="1"
 [[ -z "${RESUME}" ]]                    && export RESUME=""
 
-export CHECKPOINT_ENDPOINT="$AGENT_RESULTS"
-export RECORD_PATH="/home/carla/CarlaUE4/Saved"
+export CHECKPOINT_ENDPOINT=$AGENT_RESULTS
+export RECORD_PATH="/home/carla/recorder"
 
 export DEBUG_CHALLENGE="0"
 export DEBUG_CHECKPOINT_ENDPOINT="/workspace/leaderboard/live_results.txt"
@@ -45,6 +44,10 @@ export DEBUG_CHECKPOINT_ENDPOINT="/workspace/leaderboard/live_results.txt"
 ############################
 # Check for any previous trial. If so resume
 echo ""
+UUID=$(cat /gpu/gpu.txt)
+echo "Using GPU: ${UUID} (${NVIDIA_VISIBLE_DEVICES})"
+echo ""
+
 if [ $CRASH_ID -gt 0 ]; then
     PREVIOUS_AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$(($CRASH_ID - 1))"
     if [ -f $PREVIOUS_AGENT_CRASH_FILE ]; then
@@ -91,6 +94,9 @@ kill_and_wait_for_simulator () {
     fi
 }
 
+# Save all the outpus into a file, which will be sent to s3
+exec > >(tee "$AGENT_LOGS") 2>&1
+
 echo "Sourcing '${HOME}/agent_sources.sh'"
 source ${HOME}/.bashrc
 if [[ -f "${HOME}/agent_sources.sh" ]]; then
@@ -115,12 +121,12 @@ python3 -u ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator.py \
     --checkpoint=${CHECKPOINT_ENDPOINT} \
     --record=${RECORD_PATH} \
     --debug-checkpoint=${DEBUG_CHECKPOINT_ENDPOINT} \
-    --debug=${DEBUG_CHALLENGE} |& tee $LEADERBOARD_LOGS &
+    --debug=${DEBUG_CHALLENGE} &
 
 while sleep 5 ; do
-    if [ "$(file_age $LEADERBOARD_LOGS)" -gt "$MAX_IDLE" ]; then
+    if [ "$(file_age $AGENT_LOGS)" -gt "$MAX_IDLE" ]; then
         echo ""
-        echo "Detected no new outputs for $LEADERBOARD_LOGS during $MAX_IDLE seconds. Stopping..."
+        echo "Detected no new outputs for $AGENT_LOGS during $MAX_IDLE seconds. Stopping..."
         break
     fi
     if ! pgrep -f leaderboard_evaluator | egrep -q -v '^1$'; then

@@ -31,7 +31,7 @@ def lambda_handler(event, context):
 
     if ".cancel" in objs_extension:
         submission_status = "CANCELLED"
-    elif objs_extension.count(".done") == 3 * int(submission_data["cluster"]["parallelization_workers"]):  # each job has 3 containers
+    elif objs_extension.count(".done") == (1 + 3 * int(submission_data["cluster"]["parallelization_workers"])):  # each job has 3 containers + monitor container
         submission_status = "FINISHED"
     else:
         submission_status = "FAILED"

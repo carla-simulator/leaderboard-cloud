@@ -3,6 +3,7 @@
 # Get the file names of this attempt
 ID="$WORKER_ID"
 CRASH_ID=$(find /tmp/status -name *simulator-$ID.crash* | wc -l)
+SIMULATOR_LOGS="/tmp/logs/simulator-$ID.log"
 AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$CRASH_ID"
 AGENT_DONE_FILE="/tmp/status/agent-$ID.done"
 SIMULATOR_CRASH_FILE="/tmp/status/simulator-$ID.crash$CRASH_ID"
@@ -39,7 +40,13 @@ kill_and_wait_for_agent () {
     fi
 }
 
+# Save all the outpus into a file, which will be sent to s3
+exec > >(tee "$SIMULATOR_LOGS") 2>&1
+
 echo ""
+UUID=$(cat /gpu/gpu.txt)
+echo "Using GPU: ${UUID} (${NVIDIA_VISIBLE_DEVICES})"
+
 echo "Starting CARLA server"
 ./CarlaUE4.sh -vulkan -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=${NVIDIA_VISIBLE_DEVICES} &
 

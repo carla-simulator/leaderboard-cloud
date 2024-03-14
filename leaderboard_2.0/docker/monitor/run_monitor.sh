@@ -7,19 +7,22 @@ export SCENARIO_RUNNER_ROOT="/utils/scenario_runner"
 export LEADERBOARD_ROOT="/utils/leaderboard"
 export PYTHONPATH="${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 
-MONITOR_FOLDER="/logs/monitor" && mkdir -p $MONITOR_FOLDER
-MONITOR_LOGS="$MONITOR_FOLDER/monitor.log"
-MONITOR_DONE_FILE="$MONITOR_FOLDER/monitor.done"
-SIMULATION_CANCEL_FILE="$MONITOR_FOLDER/simulation.cancel"
+MONITOR_LOGS="/logs/logs/monitor.log"
+MONITOR_DONE_FILE="/logs/containers-status/monitor.done"
+SIMULATION_CANCEL_FILE="/logs/containers-status/simulation.cancel"
 
-AGENT_FOLDER="/logs/agent" && mkdir -p $AGENT_FOLDER
-AGENT_RESULTS_FILE="$AGENT_FOLDER/agent_results.json"
-PARTIAL_AGENT_RESULTS_FILES=$(for (( i=1; i<=$SUBMISSION_WORKERS; i++ )); do printf "$AGENT_FOLDER/agent%d/agent_results.json " $i; done)
+AGENT_RESULTS_FILE="/logs/agent_results.json"
 
-EVALAI_FOLDER="/logs/evalai" && mkdir -p $EVALAI_FOLDER
+EVALAI_FOLDER="/logs/evalai"
 EVALAI_RESULTS_FILE="$EVALAI_FOLDER/results.json"
 EVALAI_STDOUT_FILE="$EVALAI_FOLDER/stdout.txt"
 EVALAI_METADATA_FILE="$EVALAI_FOLDER/metadata.json"
+
+PARTIAL_FOLDER="/partial/logs"
+PARTIAL_AGENT_FOLDER="$PARTIAL_FOLDER/agent"
+PARTIAL_AGENT_RESULTS_FILES=$(for (( i=1; i<=$SUBMISSION_WORKERS; i++ )); do printf "$PARTIAL_AGENT_FOLDER/partial_agent_results%d.json " $i; done)
+
+PARTIAL_CONTAINERS_STATUS="$PARTIAL_FOLDER/containers-status"
 
 ###########
 ## UTILS ##
@@ -56,11 +59,11 @@ push_to_s3() {
 }
 
 pull_from_s3_containers_status() {
-  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status /logs/containers-status --no-progress
+  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status ${PARTIAL_CONTAINERS_STATUS} --no-progress
 }
 
 pull_from_s3_partial_agent_results() {
-  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/agent /logs/agent --no-progress
+  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/agent ${PARTIAL_AGENT_FOLDER} --no-progress
 }
 
 get_submission_status() {
@@ -126,7 +129,7 @@ while sleep ${MONITOR_PERIOD} ; do
 
   echo "> Checking end condition"
   pull_from_s3_containers_status
-  DONE_FILES=$(find /logs/containers-status -name *.done* | wc -l)
+  DONE_FILES=$(find $PARTIAL_CONTAINERS_STATUS -name *.done* | wc -l)
   TOTAL_DONE_FILES=$((3*$SUBMISSION_WORKERS))
   if [ $DONE_FILES -ge $TOTAL_DONE_FILES ]; then
     echo "Detected that all containers have finished. Stopping..."

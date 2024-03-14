@@ -3,9 +3,9 @@ import math
 
 def lambda_handler(event, context):
 
-    routes = float(event["data"]["submission"]["routes"])
-    workers = min(routes, float(event["data"]["cluster"]["parallelization_workers"]))
-    step = routes / workers
+    routes = int(event["data"]["submission"]["routes"])
+    workers = min(routes, int(event["data"]["cluster"]["parallelization_workers"]))
+    step = float(routes) / float(workers)
     routes_subset = ["{}-{}".format(math.ceil(i*step), math.ceil((i+1)*step) -1)  for i in range(workers)]
 
     out_ = []
