@@ -14,13 +14,13 @@ SIMULATION_CANCEL_FILE="/logs/containers-status/simulation-$ID.cancel"
 ## UTILS ##
 ###########
 push_to_s3() {
-  aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
+  aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID} --no-progress
 }
 
 #########################
 ## UPLOADER PARAMETERS ##
 #########################
-[[ -z "${UPLOADER_PERIOD}" ]] && export UPLOADER_PERIOD="10"
+[[ -z "${UPLOADER_PERIOD}" ]] && export UPLOADER_PERIOD="30"
 [ -f $SIMULATION_CANCEL_FILE ] && rm $SIMULATION_CANCEL_FILE
 
 # Save all the outpus into a file, which will be sent to s3

@@ -9,7 +9,7 @@ SIMULATOR_CRASH_FILE="/tmp/status/simulator-$ID.crash$CRASH_ID"
 SIMULATOR_DONE_FILE="/tmp/status/simulator-$ID.done"
 SIMULATION_CANCEL_FILE="/tmp/status/simulation-$ID.cancel"
 
-AGENT_FOLDER="/tmp/agent/agent-$ID" && mkdir -p $AGENT_FOLDER
+AGENT_FOLDER="/tmp/agent/agent$ID" && mkdir -p $AGENT_FOLDER
 LEADERBOARD_LOGS="$AGENT_FOLDER/leaderboard.log"
 AGENT_RESULTS="$AGENT_FOLDER/agent_results.json"
 

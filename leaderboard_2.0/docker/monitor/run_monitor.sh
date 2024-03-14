@@ -52,15 +52,15 @@ generate_evalai_files() {
 }
 
 push_to_s3() {
-  aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
+  aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID} --no-progress
 }
 
 pull_from_s3_containers_status() {
-  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status /logs/containers-status
+  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status /logs/containers-status --no-progress
 }
 
 pull_from_s3_partial_agent_results() {
-  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/agent /logs/agent
+  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/agent /logs/agent --no-progress
 }
 
 get_submission_status() {
@@ -90,7 +90,7 @@ update_partial_submission_status() {
 ########################
 ## MONITOR PARAMETERS ##
 ########################
-[[ -z "${MONITOR_PERIOD}" ]] && export MONITOR_PERIOD="10"
+[[ -z "${MONITOR_PERIOD}" ]] && export MONITOR_PERIOD="30"
 [ -f $SIMULATION_CANCEL_FILE ] && rm $SIMULATION_CANCEL_FILE
 
 # Save all the outpus into a file, which will be sent to s3
