@@ -1,14 +1,12 @@
+import math
 
 
 def lambda_handler(event, context):
 
-    # TODO: Compute this based on the total amount of routes and the desired number of workers.
-    routes_subset = [
-        "0-4",
-        "5-9",
-        "10-14",
-        "15-19"
-    ]
+    routes = float(event["data"]["submission"]["routes"])
+    workers = min(routes, float(event["data"]["cluster"]["parallelization_workers"]))
+    step = routes / workers
+    routes_subset = ["{}-{}".format(math.ceil(i*step), math.ceil((i+1)*step) -1)  for i in range(workers)]
 
     out_ = []
     for worker_id, subset in enumerate(routes_subset):
