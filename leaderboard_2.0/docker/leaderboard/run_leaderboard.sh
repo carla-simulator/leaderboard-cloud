@@ -42,6 +42,15 @@ export DEBUG_CHECKPOINT_ENDPOINT="/workspace/leaderboard/live_results.txt"
 ############################
 ## LEADERBOARD EXECUTION  ##
 ############################
+
+# Save all the outpus into a file, which will be sent to s3
+exec > >(tee -a "$AGENT_LOGS") 2>&1
+
+if [ -f "$AGENT_LOGS" ]; then
+    echo ""
+    echo "Found partial agent logs"
+fi
+
 # Check for any previous trial. If so resume
 echo ""
 UUID=$(cat /gpu/gpu.txt)
@@ -56,6 +65,13 @@ if [ $CRASH_ID -gt 0 ]; then
     fi
 else
     echo "Found no agent failure file"
+fi
+
+if [ -f "$AGENT_RESULTS" ]; then
+    echo "Found partial agent results file. Resuming..."
+    export RESUME="1"
+    cat $AGENT_RESULTS
+    echo ""
 fi
 
 # Get the modification date of a file
@@ -93,9 +109,6 @@ kill_and_wait_for_simulator () {
         echo "Detected that the simulator has finished. Exiting with success..."
     fi
 }
-
-# Save all the outpus into a file, which will be sent to s3
-exec > >(tee "$AGENT_LOGS") 2>&1
 
 echo "Sourcing '${HOME}/agent_sources.sh'"
 source ${HOME}/.bashrc

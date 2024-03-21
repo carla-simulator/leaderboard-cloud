@@ -5,6 +5,9 @@
 #######################
 ID="$WORKER_ID"
 
+# The existence of this file notifies to the monitor node that this worker has started the evaluation.
+WORKER_START_FILE="/logs/containers-status/worker-$ID.start"
+
 UPLOADER_LOGS="/logs/logs/uploader-$ID.log"
 UPLOADER_DONE_FILE="/logs/containers-status/uploader-$ID.done"
 
@@ -15,6 +18,7 @@ SIMULATION_CANCEL_FILE="/logs/containers-status/simulation-$ID.cancel"
 ###########
 push_to_s3() {
   aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID} --no-progress
+  aws s3 sync /ros/logs s3://${S3_BUCKET}/${SUBMISSION_ID}/ros/worker-$WORKER_ID --delete --no-progress
 }
 
 #########################
@@ -24,7 +28,14 @@ push_to_s3() {
 [ -f $SIMULATION_CANCEL_FILE ] && rm $SIMULATION_CANCEL_FILE
 
 # Save all the outpus into a file, which will be sent to s3
-exec > >(tee "$UPLOADER_LOGS") 2>&1
+exec > >(tee -a "$UPLOADER_LOGS") 2>&1
+
+if [ -f "$UPLOADER_LOGS" ]; then
+    echo ""
+    echo "Found partial uploader logs"
+fi
+
+touch $WORKER_START_FILE
 
 while sleep ${UPLOADER_PERIOD} ; do
   echo ""

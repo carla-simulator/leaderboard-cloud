@@ -41,7 +41,12 @@ kill_and_wait_for_agent () {
 }
 
 # Save all the outpus into a file, which will be sent to s3
-exec > >(tee "$SIMULATOR_LOGS") 2>&1
+exec > >(tee -a "$SIMULATOR_LOGS") 2>&1
+
+if [ -f "$SIMULATOR_LOGS" ]; then
+    echo ""
+    echo "Found partial simulator logs"
+fi
 
 echo ""
 UUID=$(cat /gpu/gpu.txt)

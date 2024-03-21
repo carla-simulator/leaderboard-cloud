@@ -33,13 +33,18 @@ def get_secret(secret_id):
         # detect string list (string separated by commas)
         for k, v in secret.items():
             if "," in v:
-                secret[k] = {str(item.split(":")[0]).strip():str(item.split(":")[1]).strip() for item in v.split(",")}
+                secret[k] = {str(item.split(":")[0]).strip():str(item.split(":")[1]).strip() for item in v.split(",") if item}
 
         return secret
 
-def is_team_allowed_to_apply(submission_data):
-    if float(submission_data["qualifier"]["threshold"]) <= 0.0:
-        # always allow if not qualifier threshold is specified (i.e, qualifying disabled)
+
+def _is_submission_eligible(submission_data):
+    return submission_data["submission"]["submission_status"] in ("SUBMITTED", "RESUMING")
+
+
+def _is_team_allowed(submission_data):
+    if not submission_data["qualifier"]["threshold_map"]:
+        # always allow if not qualifier threshold map is specified (i.e, qualifying disabled)
         return True
 
     if bool(submission_data["qualifier"]["is_qualifying"]):
@@ -47,13 +52,25 @@ def is_team_allowed_to_apply(submission_data):
         return True
 
     qualifier_table = dynamodb.Table(submission_data["aws"]["dynamodb_qualifier_table"])
-    response = qualifier_table.get_item(Key={
+    return "Item" in qualifier_table.get_item(Key={
         "team_id": submission_data["submission"]["team_id"],
-        "track_codename": submission_data["qualifier"]["qualifying_to"]
-    })["Item"]
-    is_allowed = True if response else False
+        "track_codename": submission_data["submission"]["track_codename"]
+    })
 
-    return is_allowed
+
+def _get_parallelization_workers(submission_id, team_id, user_desired_workers, dynamodb_submissions_table):
+    qualifier_table = dynamodb.Table(dynamodb_submissions_table)
+    response = qualifier_table.get_item(Key={
+        "team_id": team_id,
+        "submission_id": submission_id
+    })
+
+    db_workers = str(response["Item"].get("parallelization_workers", "")) if "Item" in response else ""
+
+    if db_workers:
+        return db_workers
+    return user_desired_workers
+
 
 def lambda_handler(event, context):
 
@@ -80,7 +97,7 @@ def lambda_handler(event, context):
             "endpoint": cluster_secrets["endpoint"],
             "certificate_authority": cluster_secrets["certificate_authority"],
             "instance_type": cluster_secrets["instance_type"][track_codename],
-            "parallelization_workers": cluster_secrets["parallelization_workers"][track_codename],
+            "parallelization_workers": _get_parallelization_workers(str(event["submission_pk"]),str(submission_data.get("participant_team", "")), cluster_secrets["parallelization_workers"][track_codename], cluster_secrets["dynamodb_submissions_table"]),
             "simulator_image": cluster_secrets["simulator_image"],
             "leaderboard_image": cluster_secrets["leaderboard_image"],
             "uploader_image": cluster_secrets["uploader_image"],
@@ -99,14 +116,14 @@ def lambda_handler(event, context):
             "submitted_image_uri": str(event["submitted_image_uri"]),
         },
         "qualifier": {
-            "is_qualifying": "1" if cluster_secrets["qualifier_map"] and track_codename in cluster_secrets["qualifier_map"] else "0",
+            "is_qualifying": "1" if cluster_secrets["qualifier_map"] and track_codename in cluster_secrets["qualifier_map"] else "",
             "qualifying_to": cluster_secrets["qualifier_map"].get(track_codename, "").upper() if cluster_secrets["qualifier_map"] else "",
-            "threshold": cluster_secrets["qualifier_threshold"]
+            "threshold_map": cluster_secrets["qualifier_threshold_map"]
         },
         "aws": {
             "s3_bucket": cluster_secrets["s3_bucket"],
             "dynamodb_submissions_table": cluster_secrets["dynamodb_submissions_table"],
-            "dyanmodb_qualifier_table": cluster_secrets["dynamodb_qualifier_table"]
+            "dynamodb_qualifier_table": cluster_secrets["dynamodb_qualifier_table"]
         },
         "evalai": {
             "auth_token": evalai_secrets["auth_token"],
@@ -116,8 +133,6 @@ def lambda_handler(event, context):
     }
 
     # add submission to database
-    # TODO: Add submission parallelization parameters?
-    # What happens if the submission is resuming
     submissions_table = dynamodb.Table(data["aws"]["dynamodb_submissions_table"])
     submissions_table.put_item(Item={
         "submission_id": data["submission"]["submission_id"],
@@ -134,6 +149,7 @@ def lambda_handler(event, context):
     })
 
     return {
-        "is_eligible": is_team_allowed_to_apply(data),
+        "is_eligible": _is_submission_eligible(data),
+        "is_allowed": _is_team_allowed(data),
         "data": data
     }

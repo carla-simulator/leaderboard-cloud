@@ -10,6 +10,7 @@ def lambda_handler(event, context):
             "challenge_id": event["data"]["submission"]["challenge_id"],
             "team_id": event["data"]["submission"]["team_id"],
             "track_id": event["data"]["submission"]["track_id"],
+            "resume": event["data"]["submission"]["resume"]
         },
         "aws": event["data"]["aws"],
         "evalai": event["data"]["evalai"]

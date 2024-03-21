@@ -3,7 +3,7 @@ kind: Job
 metadata:
   name.$: $.submission.name
 spec:
-  backoffLimit: 0
+  backoffLimit: 4
   template:
     spec:
       serviceAccountName: submission-worker
@@ -21,29 +21,35 @@ spec:
               cp -r ${CARLA_PYTHON_API_ROOT}/* /tmp/CARLA/
               cp -r ${GPU_UTILS_ROOT}/* /tmp/gpu_utils
 
-              if [ -z $RESUME ]; then
-                echo "Detected a normal run, creating log files"
-                mkdir -m 0777 -p /tmp/logs/logs
-                mkdir -m 0777 -p /tmp/logs/containers-status
-                mkdir -m 0777 -p /tmp/logs/agent
-                mkdir -m 0777 -p /tmp/logs/recorder
-                mkdir -m 0777 -p /tmp/logs/evalai
-              else
-                echo "Detected a resume, download log files from S3, and removing the container status data"
-                #Descargar solo el merge results.json y ponerlo en /tmp/logs/agent?
-                # Q hacer con los agent1/leaderboard.log ....
-                aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/agent/results.json /tmp/logs/agent/results.json
-                aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive
+              echo "Creating log files"
+              mkdir -m 0777 -p /tmp/logs/logs
+              mkdir -m 0777 -p /tmp/logs/containers-status
+              mkdir -m 0777 -p /tmp/logs/agent
+              mkdir -m 0777 -p /tmp/logs/recorder
+              mkdir -m 0777 -p /tmp/logs/evalai
+
+              echo "Downloading existent files from S3, and removing the container status data"
+              aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive --exclude "*" --include "*-${WORKER_ID}.*"
+              aws s3 cp s3://${S3_BUCKET}/${SUBMISSION_ID}/agent /tmp/logs/agent --recursive --exclude "*" --include "*${WORKER_ID}.json"
+              aws s3 cp s3://${S3_BUCKET}/${SUBMISSION_ID}/logs /tmp/logs/logs --recursive --exclude "*" --include "*-${WORKER_ID}.log"
+
+              chmod 0777 -R /tmp/logs
+
+              if [ ! -z $RESUME ]; then
+                echo "Detected a resume initiated by the user."
+                aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive --exclude "*" --include "simulation.cancel"
               fi
 
               bash /tmp/gpu_utils/get_gpu_uuid.sh > /tmp/gpu_utils/gpu.txt
           env:
             - name: SUBMISSION_ID
               value.$: $.submission.submission_id
-            - name: RESUME
-              value.$: $.submission.resume
+            - name: WORKER_ID
+              value.$: $.parallelization.worker_id
             - name: S3_BUCKET
               value.$: "$.aws.s3_bucket"
+            - name: RESUME
+              value.$: $.submission.resume
           volumeMounts:
             - mountPath: /tmp/leaderboard
               name: leaderboard
@@ -124,6 +130,8 @@ spec:
             - mountPath: /tmp/status
               name: logs
               subPath: containers-status
+            - mountPath: /workspace/log/ros
+              name: ros-logs
 
         - name: aws-uploader
           image.$: $.cluster.uploader_image
@@ -141,8 +149,10 @@ spec:
           volumeMounts:
             - mountPath: /logs
               name: logs
+            - mountPath: /ros/logs
+              name: ros-logs
 
-      restartPolicy: Never
+      restartPolicy: OnFailure
       volumes:
         - name: leaderboard
           emptyDir: {}
@@ -153,6 +163,8 @@ spec:
         - name: gpu-utils
           emptyDir: {}
         - name: logs
+          emptyDir: {}
+        - name: ros-logs
           emptyDir: {}
         - name: x11
           hostPath:

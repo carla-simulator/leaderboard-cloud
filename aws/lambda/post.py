@@ -15,7 +15,7 @@ dynamodb = boto3.resource('dynamodb')
 def lambda_handler(event, context):
  
     out = copy.deepcopy(event)
-    is_eligible, submission_data = out["is_eligible"], out["data"]
+    is_eligible, is_allowed, submission_data = out["is_eligible"], out["is_allowed"], out["data"]
 
     def read_file_from_s3(bucket, file):
         try:
@@ -40,7 +40,7 @@ def lambda_handler(event, context):
 
     results = read_file_from_s3(submission_data["aws"]["s3_bucket"], "{}/evalai/results.json".format(submission_data["submission"]["submission_id"]))
     stdout = read_file_from_s3(submission_data["aws"]["s3_bucket"], "{}/evalai/stdout.txt".format(submission_data["submission"]["submission_id"]))
-    stderr = "" if is_eligible else "You are not allowed to submit to this track. Please, run the qualifier track first."
+    stderr = "" if is_allowed else "You are not allowed to submit to this track. Please, run the qualifier track first."
     metadata = read_file_from_s3(submission_data["aws"]["s3_bucket"], "{}/evalai/metadata.json".format(submission_data["submission"]["submission_id"]))
 
     if submission_status == "FINISHED":
@@ -49,15 +49,27 @@ def lambda_handler(event, context):
         submission_data["results"] = {k.replace(" ", "_").lower(): str(v) for k,v in json.loads(results)[0]["accuracies"].items()}
 
         # update qualified team
-        if bool(submission_data["qualifier"]["is_qualifying"]) and float(submission_data["results"]["driving_score"]) >= float(submission_data["qualifier"]["threshold"]):
-            # the team is now qualified
-            qualifier_table = dynamodb.Table(submission_data["aws"]["dynamodb_qualifier_table"])
-            qualifier_table.put_item(Item={
-                "team_id": submission_data["submission"]["team_id"],
-                "track_codename": submission_data["qualifier"]["qualifying_to"],
-                "submission_id": submission_data["submission"]["submission_id"]
-            })
+        if bool(submission_data["qualifier"]["is_qualifying"]):
+            if all([float(submission_data["results"][metric]) > float(threshold) for metric,threshold in submission_data["qualifier"]["threshold_map"].items()]):
+                # the team is qualified
+                qualifier_table = dynamodb.Table(submission_data["aws"]["dynamodb_qualifier_table"])
+                qualifier_table.put_item(Item={
+                    "team_id": submission_data["submission"]["team_id"],
+                    "track_codename": submission_data["qualifier"]["qualifying_to"],
+                    "submission_id": submission_data["submission"]["submission_id"]
+                })
+                qualifier_stdout = "CONGRATULATIONS! You have qualified for the {} track:\n\n".format(submission_data["qualifier"]["qualifying_to"])
 
+            else:
+                # the team is not qualified
+                qualifier_stdout = "Unfortunately, you haven't scored high enough to qualify for the {} track:\n\n".format(submission_data["qualifier"]["qualifying_to"])
+
+            qualifier_stdout += "Find below the relevant qualifying scores:\n"
+            for metric, threshold in submission_data["qualifier"]["threshold_map"].items():
+                qualifier_stdout += "- " + metric.replace("_", " ").capitalize() + ": " + str(submission_data["results"][metric]) + " / " + str(threshold)  + "\n"
+            qualifier_stdout += "\n"
+
+            stdout = qualifier_stdout + stdout
 
     pool_manager = urllib3.PoolManager()
     try:
