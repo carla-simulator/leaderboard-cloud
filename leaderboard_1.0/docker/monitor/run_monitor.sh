@@ -7,19 +7,22 @@ export SCENARIO_RUNNER_ROOT="/utils/scenario_runner"
 export LEADERBOARD_ROOT="/utils/leaderboard"
 export PYTHONPATH="${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 
-MONITOR_FOLDER="/logs/monitor" && mkdir -p $MONITOR_FOLDER
-MONITOR_LOGS="$MONITOR_FOLDER/monitor.log"
-MONITOR_DONE_FILE="$MONITOR_FOLDER/monitor.done"
-SIMULATION_CANCEL_FILE="$MONITOR_FOLDER/simulation.cancel"
+MONITOR_LOGS="/logs/logs/monitor.log"
+MONITOR_DONE_FILE="/logs/containers-status/monitor.done"
+SIMULATION_CANCEL_FILE="/logs/containers-status/simulation.cancel"
 
-AGENT_FOLDER="/logs/agent" && mkdir -p $AGENT_FOLDER
-AGENT_RESULTS_FILE="$AGENT_FOLDER/agent_results.json"
-PARTIAL_AGENT_RESULTS_FILES=$(for (( i=1; i<=$SUBMISSION_WORKERS; i++ )); do printf "$AGENT_FOLDER/agent%d/agent_results.json " $i; done)
+AGENT_RESULTS_FILE="/logs/agent_results.json"
 
-EVALAI_FOLDER="/logs/evalai" && mkdir -p $EVALAI_FOLDER
+EVALAI_FOLDER="/logs/evalai"
 EVALAI_RESULTS_FILE="$EVALAI_FOLDER/results.json"
 EVALAI_STDOUT_FILE="$EVALAI_FOLDER/stdout.txt"
 EVALAI_METADATA_FILE="$EVALAI_FOLDER/metadata.json"
+
+PARTIAL_FOLDER="/partial/logs"
+PARTIAL_AGENT_FOLDER="$PARTIAL_FOLDER/agent"
+PARTIAL_AGENT_RESULTS_FILES=$(for (( i=1; i<=$SUBMISSION_WORKERS; i++ )); do printf "$PARTIAL_AGENT_FOLDER/partial_agent_results%d.json " $i; done)
+
+PARTIAL_CONTAINERS_STATUS="$PARTIAL_FOLDER/containers-status"
 
 ###########
 ## UTILS ##
@@ -52,21 +55,21 @@ generate_evalai_files() {
 }
 
 push_to_s3() {
-  aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID}
+  aws s3 sync /logs s3://${S3_BUCKET}/${SUBMISSION_ID} --no-progress
 }
 
 pull_from_s3_containers_status() {
-  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status /logs/containers-status
+  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status ${PARTIAL_CONTAINERS_STATUS} --no-progress
 }
 
 pull_from_s3_partial_agent_results() {
-  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/agent /logs/agent
+  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/agent ${PARTIAL_AGENT_FOLDER} --no-progress
 }
 
 get_submission_status() {
   ADDR="$EVALAI_API_SERVER/api/jobs/submission/$SUBMISSION_ID"
   HEADER="Authorization: Bearer $EVALAI_AUTH_TOKEN"
-  STATUS=$(curl --location --request GET "$ADDR" --header "${HEADER}" | jq ".status" | sed 's:^.\(.*\).$:\1:')
+  STATUS=$(curl --max-time 600 --silent --location --request GET "$ADDR" --header "${HEADER}" | jq ".status" | sed 's:^.\(.*\).$:\1:')
   echo $STATUS
 }
 
@@ -84,23 +87,41 @@ update_partial_submission_status() {
         "result": '"$RESULTS_STR"',
         "stderr": "",
         "metadata": '"$METADATA_STR"'}'
-  curl --location --request PUT "$ADDR" --header "$HEADER" --header 'Content-Type: application/json' --data-raw "$DATA"
+  curl --max-time 600 --silent --location --request PUT "$ADDR" --header "$HEADER" --header 'Content-Type: application/json' --data-raw "$DATA"
 }
 
 ########################
 ## MONITOR PARAMETERS ##
 ########################
-[[ -z "${MONITOR_PERIOD}" ]] && export MONITOR_PERIOD="10"
+[[ -z "${MONITOR_PERIOD}" ]] && export MONITOR_PERIOD="30"
 [ -f $SIMULATION_CANCEL_FILE ] && rm $SIMULATION_CANCEL_FILE
 
 # Save all the outpus into a file, which will be sent to s3
-exec > >(tee "$MONITOR_LOGS") 2>&1
+exec > >(tee -a "$MONITOR_LOGS") 2>&1
+
+if [ -f "$MONITOR_LOGS" ]; then
+    echo ""
+    echo "Found partial monitor logs"
+fi
 
 update_database
 
 while sleep ${MONITOR_PERIOD} ; do
   echo ""
   echo "[$(date +"%Y-%m-%d %T")] Starting monitor loop"
+
+  echo "> Pulling containers status"
+  pull_from_s3_containers_status
+
+  echo "> Checking start condition"
+  START_FILES=$(find $PARTIAL_CONTAINERS_STATUS -name *.start* | wc -l)
+  if [ $START_FILES -gt 0 ]; then
+    echo "Detected that $START_FILES out of the $SUBMISSION_WORKERS submission workers have started."
+  else
+    echo "Detected that no submission workers have started. Waiting..."
+    continue
+  fi
+
   echo "> Pulling partial agent results"
   pull_from_s3_partial_agent_results
 
@@ -125,10 +146,15 @@ while sleep ${MONITOR_PERIOD} ; do
   update_partial_submission_status
 
   echo "> Checking end condition"
-  pull_from_s3_containers_status
-  DONE_FILES=$(find /logs/containers-status -name *.done* | wc -l)
-  TOTAL_DONE_FILES=$((3*$SUBMISSION_WORKERS))
-  if [ $DONE_FILES -ge $TOTAL_DONE_FILES ]; then
+  DONE_FILES=$(find $PARTIAL_CONTAINERS_STATUS -name *.done* | wc -l)
+  CRASH_FILES=$(find $PARTIAL_CONTAINERS_STATUS -name *.crash* | wc -l)
+  
+  DONE_WORKERS=$(($DONE_FILES / 3))
+  CRASH_WORKERS=$(($CRASH_FILES / 4))  # 4 is the backofflimit of the submission_worker
+
+  FINISHED_WORKERS=$(($DONE_WORKERS+$CRASH_WORKERS))
+
+  if [ $FINISHED_WORKERS -ge $SUBMISSION_WORKERS ]; then
     echo "Detected that all containers have finished. Stopping..."
     touch $MONITOR_DONE_FILE
     merge_statistics
@@ -136,7 +162,7 @@ while sleep ${MONITOR_PERIOD} ; do
     push_to_s3
     break
   else
-    echo "Detected that only $DONE_FILES out of the $TOTAL_DONE_FILES containers have finished. Waiting..."
+    echo "Detected that only $FINISHED_WORKERS out of the $SUBMISSION_WORKERS submission workers have finished. Waiting..."
   fi
 
 done

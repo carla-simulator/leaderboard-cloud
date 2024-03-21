@@ -13,6 +13,9 @@ PRETTY_SENSORS = {
     'carla_speedometer': 'Speedometer'
 }
 
+ROUND_RATIO_DIGITS = 4
+
+
 def main():
     """
     Extract some global and route records into readable format
@@ -27,12 +30,16 @@ def main():
     if not data or 'sensors' not in data or '_checkpoint' not in data \
         or 'progress' not in data['_checkpoint'] or 'records' not in data['_checkpoint']:
         pretty_output = "Initializing the submission, no data avaialable yet.\n"
-        pretty_output = "More information will be found here once the submission starts running.\n"
+        pretty_output += "More information will be found here once the submission starts running.\n"
         with open(args.endpoint, 'w') as fd:
             fd.write(pretty_output)
         sys.exit(0)
 
-    pretty_output = "Here is a summary of the submission's current results\n\n"
+    global_record = data['_checkpoint']['global_record']
+    if global_record:
+        pretty_output = "Here is a summary of the submission's results\n\n"
+    else:
+        pretty_output = "Here is a summary of the submission's current results\n\n"
     pretty_output += "General information:\n"
 
     # Sensors
@@ -64,18 +71,19 @@ def main():
             "route_id": record['route_id'],
             "index": record['index'],
             "status": record['status'],
-            "ratio": ratio,
+            "ratio": round(ratio, ROUND_RATIO_DIGITS),
+            "fps": round(20*ratio, ROUND_RATIO_DIGITS),
         })
 
         total_duration_game += record['meta']['duration_game']
         total_duration_system += record['meta']['duration_system']
 
     # General duration
-    ratio = 0 if total_duration_system == 0 else total_duration_game / total_duration_system
+    ratio = round(0.0 if total_duration_system == 0 else total_duration_game / total_duration_system, ROUND_RATIO_DIGITS)
+    fps = round(20 * ratio, ROUND_RATIO_DIGITS)
     pretty_output += f"- Submission ratio of {ratio}x\n"
-    pretty_output += f"- Submission FPS of {20*ratio}\n"
+    pretty_output += f"- Submission FPS of {fps}\n"
 
-    global_record = data['_checkpoint']['global_record']
     if global_record:
         pretty_output += f"- Results:\n"
         pretty_output += f"  - Driving score: {global_record['scores']['score_composed']}\n"
@@ -86,7 +94,7 @@ def main():
         pretty_output += f"  - Collisions layout: {global_record['infractions']['collisions_layout']}\n"
         pretty_output += f"  - Red light infractions: {global_record['infractions']['red_light']}\n"
         pretty_output += f"  - Stop sign infractions: {global_record['infractions']['stop_infraction']}\n"
-        pretty_output += f"  - Off-road infractions:{global_record['infractions']['outside_route_lanes']}\n"
+        pretty_output += f"  - Off-road infractions: {global_record['infractions']['outside_route_lanes']}\n"
         pretty_output += f"  - Route deviations: {global_record['infractions']['route_dev']}\n"
         pretty_output += f"  - Route timeouts: {global_record['infractions']['route_timeout']}\n"
         pretty_output += f"  - Agent blocked: {global_record['infractions']['vehicle_blocked']}\n"
@@ -103,7 +111,7 @@ def main():
             pretty_output += f"  - Route ID: {route['route_id']}\n"
             pretty_output += f"  - Status: {route['status']}\n"
             pretty_output += f"  - Ratio: {route['ratio']}x\n"
-            pretty_output += f"  - FPS: {20*route['ratio']}\n"
+            pretty_output += f"  - FPS: {route['fps']}\n"
 
     with open(args.endpoint, 'w') as fd:
         fd.write(pretty_output)

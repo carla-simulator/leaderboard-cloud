@@ -51,12 +51,12 @@ if [ -f "$AGENT_LOGS" ]; then
     echo "Found partial agent logs"
 fi
 
-# Check for any previous trial. If so resume
 echo ""
 UUID=$(cat /gpu/gpu.txt)
 echo "Using GPU: ${UUID} (${NVIDIA_VISIBLE_DEVICES})"
 echo ""
 
+# Check for any previous trial. If so resume
 if [ $CRASH_ID -gt 0 ]; then
     PREVIOUS_AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$(($CRASH_ID - 1))"
     if [ -f $PREVIOUS_AGENT_CRASH_FILE ]; then

@@ -38,7 +38,7 @@ then
     echo "Error $CARLA_ROOT is empty. Set \$CARLA_ROOT as an environment variable first."
     exit 1
 fi
-echo "Using the CARLA version at '$CARLA_ROOT'"
+echo "Using CARLA version: '$CARLA_ROOT'"
 
 if [ -z "$CHALLENGE_CONTENTS_ROOT" ]
 then echo "Error $CHALLENGE_CONTENTS_ROOT is empty. Set \$CHALLENGE_CONTENTS_ROOT as an environment variable first."
