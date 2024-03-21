@@ -75,8 +75,136 @@ nodeGroups:
     volumeSize: 100
     labels:
       role: basic-worker
-  - name: submission-worker
+
+  - name: monitor-worker
+    instanceType: t3.medium
+    amiFamily: AmazonLinux2
+    desiredCapacity: 0
+    minSize: 0
+    maxSize: 4
+    volumeSize: 100
+    tags:
+      k8s.io/cluster-autoscaler/enabled: "true"
+      k8s.io/cluster-autoscaler/staging-leaderboard-20: "owned"
+    labels:
+      role: submission-generic-worker
+
+  - name: submission-worker-g5x12
     instanceType: g5.12xlarge
+    amiFamily: Ubuntu2004
+    ami: ami-05c54e41645c675fe
+    desiredCapacity: 0
+    minSize: 0
+    maxSize: 4
+    volumeSize: 400
+    tags:
+      k8s.io/cluster-autoscaler/enabled: "true"
+      k8s.io/cluster-autoscaler/staging-leaderboard-20: "owned"
+    labels:
+      role: submission-generic-worker
+    ssh:
+      publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDkL6oBOlOqWp4BgOIsQnHQkaPCEGQjdqwWPy1WXLPEnjMLQ3iFGK+zMJ3VNhYujhemn2Yxja8Yw+a0MWv0OfV9TTcW6gsjsBuZyBA0g7OkaFFrAiEi42gajqqnBCEpbEL8/+MYnOHSYCqIXi7yyzHwDGuUzBsyTTsbAmdvuQ8o7sh7QH0Ncw5Z7605RTQI1MxP2zAQdl/UdZipFH9Q3pCidwWLJ3WFYTvKkhpEjiUyrf2sfPya89yFQdfLytpX4mW/YRsvLIoBElJYDkcAkyGPU6N0o+CoXyFg1ezvB9rXFsW1XgRf4ZR3nKxiM9yi1N1Z0/rf5hUWseNRt6/Xl0pn"
+    overrideBootstrapCommand: |
+      #!/bin/bash
+      /etc/eks/bootstrap.sh staging-leaderboard-20
+      sudo bash -c "echo 'version = 2
+      [plugins]
+        [plugins.\"io.containerd.grpc.v1.cri\"]
+          [plugins.\"io.containerd.grpc.v1.cri\".containerd]
+            default_runtime_name = \"nvidia\"
+
+            [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes]
+              [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nvidia]
+                privileged_without_host_devices = false
+                runtime_engine = \"\"
+                runtime_root = \"\"
+                runtime_type = \"io.containerd.runc.v2\"
+                [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nvidia.options]
+                  BinaryName = \"/usr/bin/nvidia-container-runtime\"' \
+      > /etc/containerd/config.toml"
+      sudo systemctl restart containerd
+    preBootstrapCommands:
+      - "sudo nvidia-xconfig --preserve-busid -a --virtual=1280x1024"
+      - "sudo X :0&"
+
+  - name: submission-worker-g5x
+    instanceType: g5.xlarge
+    amiFamily: Ubuntu2004
+    ami: ami-05c54e41645c675fe
+    desiredCapacity: 0
+    minSize: 0
+    maxSize: 4
+    volumeSize: 400
+    tags:
+      k8s.io/cluster-autoscaler/enabled: "true"
+      k8s.io/cluster-autoscaler/staging-leaderboard-20: "owned"
+    labels:
+      role: submission-generic-worker
+    ssh:
+      publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDkL6oBOlOqWp4BgOIsQnHQkaPCEGQjdqwWPy1WXLPEnjMLQ3iFGK+zMJ3VNhYujhemn2Yxja8Yw+a0MWv0OfV9TTcW6gsjsBuZyBA0g7OkaFFrAiEi42gajqqnBCEpbEL8/+MYnOHSYCqIXi7yyzHwDGuUzBsyTTsbAmdvuQ8o7sh7QH0Ncw5Z7605RTQI1MxP2zAQdl/UdZipFH9Q3pCidwWLJ3WFYTvKkhpEjiUyrf2sfPya89yFQdfLytpX4mW/YRsvLIoBElJYDkcAkyGPU6N0o+CoXyFg1ezvB9rXFsW1XgRf4ZR3nKxiM9yi1N1Z0/rf5hUWseNRt6/Xl0pn"
+    overrideBootstrapCommand: |
+      #!/bin/bash
+      /etc/eks/bootstrap.sh staging-leaderboard-20
+      sudo bash -c "echo 'version = 2
+      [plugins]
+        [plugins.\"io.containerd.grpc.v1.cri\"]
+          [plugins.\"io.containerd.grpc.v1.cri\".containerd]
+            default_runtime_name = \"nvidia\"
+
+            [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes]
+              [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nvidia]
+                privileged_without_host_devices = false
+                runtime_engine = \"\"
+                runtime_root = \"\"
+                runtime_type = \"io.containerd.runc.v2\"
+                [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nvidia.options]
+                  BinaryName = \"/usr/bin/nvidia-container-runtime\"' \
+      > /etc/containerd/config.toml"
+      sudo systemctl restart containerd
+    preBootstrapCommands:
+      - "sudo nvidia-xconfig --preserve-busid -a --virtual=1280x1024"
+      - "sudo X :0&"
+
+  - name: submission-worker-g5x2
+    instanceType: g5.2xlarge
+    amiFamily: Ubuntu2004
+    ami: ami-05c54e41645c675fe
+    desiredCapacity: 0
+    minSize: 0
+    maxSize: 4
+    volumeSize: 400
+    tags:
+      k8s.io/cluster-autoscaler/enabled: "true"
+      k8s.io/cluster-autoscaler/staging-leaderboard-20: "owned"
+    labels:
+      role: submission-generic-worker
+    ssh:
+      publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDkL6oBOlOqWp4BgOIsQnHQkaPCEGQjdqwWPy1WXLPEnjMLQ3iFGK+zMJ3VNhYujhemn2Yxja8Yw+a0MWv0OfV9TTcW6gsjsBuZyBA0g7OkaFFrAiEi42gajqqnBCEpbEL8/+MYnOHSYCqIXi7yyzHwDGuUzBsyTTsbAmdvuQ8o7sh7QH0Ncw5Z7605RTQI1MxP2zAQdl/UdZipFH9Q3pCidwWLJ3WFYTvKkhpEjiUyrf2sfPya89yFQdfLytpX4mW/YRsvLIoBElJYDkcAkyGPU6N0o+CoXyFg1ezvB9rXFsW1XgRf4ZR3nKxiM9yi1N1Z0/rf5hUWseNRt6/Xl0pn"
+    overrideBootstrapCommand: |
+      #!/bin/bash
+      /etc/eks/bootstrap.sh staging-leaderboard-20
+      sudo bash -c "echo 'version = 2
+      [plugins]
+        [plugins.\"io.containerd.grpc.v1.cri\"]
+          [plugins.\"io.containerd.grpc.v1.cri\".containerd]
+            default_runtime_name = \"nvidia\"
+
+            [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes]
+              [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nvidia]
+                privileged_without_host_devices = false
+                runtime_engine = \"\"
+                runtime_root = \"\"
+                runtime_type = \"io.containerd.runc.v2\"
+                [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nvidia.options]
+                  BinaryName = \"/usr/bin/nvidia-container-runtime\"' \
+      > /etc/containerd/config.toml"
+      sudo systemctl restart containerd
+    preBootstrapCommands:
+      - "sudo nvidia-xconfig --preserve-busid -a --virtual=1280x1024"
+      - "sudo X :0&"
+
+  - name: submission-worker-g5x4
+    instanceType: g5.4xlarge
     amiFamily: Ubuntu2004
     ami: ami-05c54e41645c675fe
     desiredCapacity: 0
