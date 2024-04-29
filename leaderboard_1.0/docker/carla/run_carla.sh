@@ -1,13 +1,14 @@
 #!/bin/bash
 
 # Get the file names of this attempt
-ID=$(($NVIDIA_VISIBLE_DEVICES + 1))
+ID="$WORKER_ID"
 CRASH_ID=$(find /tmp/status -name *simulator-$ID.crash* | wc -l)
+SIMULATOR_LOGS="/tmp/logs/simulator-$ID.log"
 AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$CRASH_ID"
 AGENT_DONE_FILE="/tmp/status/agent-$ID.done"
 SIMULATOR_CRASH_FILE="/tmp/status/simulator-$ID.crash$CRASH_ID"
 SIMULATOR_DONE_FILE="/tmp/status/simulator-$ID.done"
-SIMULATION_CANCEL_FILE="/tmp/status/simulation.cancel"
+SIMULATION_CANCEL_FILE="/tmp/status/simulation-$ID.cancel"
 
 # Ending function before exitting the container
 kill_all_processes() {
@@ -39,9 +40,20 @@ kill_and_wait_for_agent () {
     fi
 }
 
+# Save all the outpus into a file, which will be sent to s3
+exec > >(tee -a "$SIMULATOR_LOGS") 2>&1
+
+if [ -f "$SIMULATOR_LOGS" ]; then
+    echo ""
+    echo "Found partial simulator logs"
+fi
+
 echo ""
+UUID=$(cat /gpu/gpu.txt)
+echo "Using GPU: ${UUID} (${NVIDIA_VISIBLE_DEVICES})"
+
 echo "Starting CARLA server"
-./CarlaUE4.sh  -carla-rpc-port=${CARLA_PORT} -opengl -nosound &
+./CarlaUE4.sh -opengl -nosound &
 
 while sleep 5 ; do
     if [ -f $AGENT_CRASH_FILE ]; then

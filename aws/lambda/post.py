@@ -1,4 +1,3 @@
-import base64
 import copy
 import datetime
 import json
@@ -7,29 +6,17 @@ import time
 import urllib3
 
 import boto3
-import botocore.exceptions
 
-session = boto3.session.Session()
-client = session.client(
-    service_name="secretsmanager",
-)
-
-
-def get_secret(secret_id):
-    try:
-        response = client.get_secret_value(SecretId=secret_id)
-    except botocore.exceptions.ClientError as e:
-        raise e
-    else:
-        if "SecretString" in response:
-            secret = response["SecretString"]
-        else:
-            secret = base64.b64decode(response["SecretBinary"])
-        return json.loads(secret)
+# aws resources
+s3 = boto3.resource('s3')
+dynamodb = boto3.resource('dynamodb')
 
 
 def lambda_handler(event, context):
  
+    out = copy.deepcopy(event)
+    is_eligible, is_allowed, submission_data = out["is_eligible"], out["is_allowed"], out["data"]
+
     def read_file_from_s3(bucket, file):
         try:
             obj = s3.Object(bucket, file)
@@ -37,59 +24,79 @@ def lambda_handler(event, context):
         except Exception as e:
             return ""
 
-    s3 = boto3.resource('s3')
-    bucket = s3.Bucket(event["aws"]["s3_bucket"])
-    objs = list(bucket.objects.filter(Prefix="{}/containers-status".format(event["submission"]["submission_id"])))
+    bucket = s3.Bucket(submission_data["aws"]["s3_bucket"])
+    objs = list(bucket.objects.filter(Prefix="{}/containers-status".format(submission_data["submission"]["submission_id"])))
     objs_name = [os.path.basename(o.key) for o in objs]
     objs_extension = [os.path.splitext(obj_name)[1] for obj_name in objs_name]
 
     if ".cancel" in objs_extension:
         submission_status = "CANCELLED"
-    elif objs_extension.count(".done") == 9:
+    elif objs_extension.count(".done") == (1 + 3 * int(submission_data["cluster"]["parallelization_workers"])):  # each job has 3 containers + monitor container
         submission_status = "FINISHED"
     else:
         submission_status = "FAILED"
 
-    submission_data = copy.deepcopy(event)
     submission_data["submission"]["submission_status"] = submission_status
-    submission_data["submission"]["end_time"] = f"{datetime.datetime.now().strftime('%Y-%m-%d %T%Z')} {time.tzname[time.daylight]}"
 
-    results = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/results.json".format(event["submission"]["submission_id"]))
-    stdout = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/stdout.txt".format(event["submission"]["submission_id"]))
-    metadata = read_file_from_s3(event["aws"]["s3_bucket"], "{}/evalai/metadata.json".format(event["submission"]["submission_id"]))
+    results = read_file_from_s3(submission_data["aws"]["s3_bucket"], "{}/evalai/results.json".format(submission_data["submission"]["submission_id"]))
+    stdout = read_file_from_s3(submission_data["aws"]["s3_bucket"], "{}/evalai/stdout.txt".format(submission_data["submission"]["submission_id"])) if is_allowed else "You are not allowed to submit to this track. Please, run the qualifier track first."
+    stderr = "" if is_allowed else "You are not allowed to submit to this track. Please, run the qualifier track first."
+    metadata = read_file_from_s3(submission_data["aws"]["s3_bucket"], "{}/evalai/metadata.json".format(submission_data["submission"]["submission_id"]))
 
     if submission_status == "FINISHED":
-        # Extract results
+        # extract results
         assert results is not ""
         submission_data["results"] = {k.replace(" ", "_").lower(): str(v) for k,v in json.loads(results)[0]["accuracies"].items()}
 
-    evalai_secrets = get_secret(secret_id="evalai")
-    manager = urllib3.PoolManager()
+        # update qualified team
+        if bool(submission_data["qualifier"]["is_qualifying"]):
+            if all([float(submission_data["results"][metric]) > float(threshold) for metric,threshold in submission_data["qualifier"]["threshold_map"].items()]):
+                # the team is qualified
+                qualifier_table = dynamodb.Table(submission_data["aws"]["dynamodb_qualifier_table"])
+                qualifier_table.put_item(Item={
+                    "team_id": submission_data["submission"]["team_id"],
+                    "track_codename": submission_data["qualifier"]["qualifying_to"],
+                    "submission_id": submission_data["submission"]["submission_id"]
+                })
+                qualifier_stdout = "CONGRATULATIONS! You have qualified for the {} track:\n\n".format(submission_data["qualifier"]["qualifying_to"])
+
+            else:
+                # the team is not qualified
+                qualifier_stdout = "Unfortunately, you haven't scored high enough to qualify for the {} track:\n\n".format(submission_data["qualifier"]["qualifying_to"])
+
+            qualifier_stdout += "Find below the relevant qualifying scores:\n"
+            for metric, threshold in submission_data["qualifier"]["threshold_map"].items():
+                qualifier_stdout += "- " + metric.replace("_", " ").capitalize() + ": " + str(submission_data["results"][metric]) + " / " + str(threshold)  + "\n"
+            qualifier_stdout += "\n"
+
+            stdout = qualifier_stdout + stdout
+
+    pool_manager = urllib3.PoolManager()
     try:
         evalai_status = ""
         retries, MAX_RETRIES = 0, 5
         while submission_status != evalai_status and retries < MAX_RETRIES:
-            out = json.loads(manager.request(
+            out = json.loads(pool_manager.request(
                 method="PUT",
-                url="{}{}{}{}".format(evalai_secrets["api_server"], "/api/jobs/challenge/", event["submission"]["challenge_id"], "/update_submission/"),
-                headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"]), "Content-Type": "application/json"},
+                url="{}{}{}{}".format(submission_data["evalai"]["api_server"], "/api/jobs/challenge/", submission_data["submission"]["challenge_id"], "/update_submission/"),
+                headers={"Authorization": "Bearer {}".format(submission_data["evalai"]["auth_token"]), "Content-Type": "application/json"},
                 body=json.dumps({
                     "submission": submission_data["submission"]["submission_id"],
                     "challenge_phase": submission_data["submission"]["track_id"],
                     "submission_status": submission_data["submission"]["submission_status"],
                     "result": results,
                     "stdout": stdout,
-                    "stderr": "",
+                    "stderr": stderr,
                     "environment_log": "",
                     "metadata": metadata,
                 })
             ).data)
             print(out)
 
-            evalai_status = json.loads(manager.request(
+            evalai_status = json.loads(pool_manager.request(
                 method="GET",
-                url="{0}{1}{2}".format(evalai_secrets["api_server"], "/api/jobs/submission/", event["submission"]["submission_id"]),
-                headers={"Authorization": "Bearer {}".format(evalai_secrets["auth_token"])},
+                url="{0}{1}{2}".format(submission_data["evalai"]["api_server"], "/api/jobs/submission/", submission_data["submission"]["submission_id"]),
+                headers={"Authorization": "Bearer {}".format(submission_data["evalai"]["auth_token"])},
             ).data).get("status", "").upper()
             retries += 1
 
@@ -97,5 +104,31 @@ def lambda_handler(event, context):
 
     except:
         pass
+
+    # update submissions in the database
+    submissions_table = dynamodb.Table(submission_data["aws"]["dynamodb_submissions_table"])
+    submissions_table.update_item(
+        Key={"team_id": submission_data["submission"]["team_id"], "submission_id": submission_data["submission"]["submission_id"]},
+        UpdateExpression="SET submission_status = :s, end_time = :t, driving_score = :ds, route_completion = :rc, infraction_penalty = :ip, collisions_pedestrians = :cp, collisions_vehicles = :cv, collisions_layout = :cl, red_light_infractions = :rl, stop_sign_infractions = :ss, off_road_infractions = :or, route_deviations = :rd, route_timeouts = :rt, agent_blocked = :ab, yield_emergency_vehicle_infractions = :ev, scenario_timeouts = :st, min_speed_infractions = :ms",
+        ExpressionAttributeValues={
+            ":s":  submission_data["submission"]["submission_status"],
+            ":t":  f"{datetime.datetime.now().strftime('%Y-%m-%d %T%Z')} {time.tzname[time.daylight]}",
+            ":ds": submission_data["results"].get("driving_score", "-"),
+            ":rc": submission_data["results"].get("route_completion", "-"),
+            ":ip": submission_data["results"].get("infraction_penalty", "-"),
+            ":cp": submission_data["results"].get("collisions_pedestrians", "-"),
+            ":cv": submission_data["results"].get("collisions_vehicles", "-"),
+            ":cl": submission_data["results"].get("collisions_layout", "-"),
+            ":rl": submission_data["results"].get("red_light_infractions", "-"),
+            ":ss": submission_data["results"].get("stop_sign_infractions", "-"),
+            ":or": submission_data["results"].get("off-road_infractions", "-"),
+            ":rd": submission_data["results"].get("route_deviations", "-"),
+            ":rt": submission_data["results"].get("route_timeouts", "-"),
+            ":ab": submission_data["results"].get("results.agent_blocked", "-"),
+            ":ev": submission_data["results"].get("yield_emergency_vehicle_infractions", "-"),
+            ":st": submission_data["results"].get("scenario_timeouts", "-"),
+            ":ms": submission_data["results"].get("min_speed_infractions", "-")
+        }
+    )
 
     return submission_data

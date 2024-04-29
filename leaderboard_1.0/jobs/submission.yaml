@@ -1,0 +1,162 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name.$: $.submission.name
+spec:
+  backoffLimit: 4
+  template:
+    spec:
+      serviceAccountName: submission-worker
+      nodeSelector:
+        node.kubernetes.io/instance-type.$: $.cluster.instance_type
+
+      initContainers:
+        - name: private-contents
+          image.$: $.cluster.leaderboard_image
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              cp -r ${LEADERBOARD_ROOT}/* /tmp/leaderboard/
+              cp -r ${SCENARIO_RUNNER_ROOT}/* /tmp/scenario_runner/
+              cp -r ${CARLA_PYTHON_API_ROOT}/* /tmp/CARLA/
+              cp -r ${GPU_UTILS_ROOT}/* /tmp/gpu_utils
+
+              echo "Creating log files"
+              mkdir -m 0777 -p /tmp/logs/logs
+              mkdir -m 0777 -p /tmp/logs/containers-status
+              mkdir -m 0777 -p /tmp/logs/agent
+              mkdir -m 0777 -p /tmp/logs/recorder
+              mkdir -m 0777 -p /tmp/logs/evalai
+
+              echo "Downloading existent files from S3, and removing the container status data"
+              aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive --exclude "*" --include "*-${WORKER_ID}.*"
+              aws s3 cp s3://${S3_BUCKET}/${SUBMISSION_ID}/agent /tmp/logs/agent --recursive --exclude "*" --include "*${WORKER_ID}.json"
+              aws s3 cp s3://${S3_BUCKET}/${SUBMISSION_ID}/logs /tmp/logs/logs --recursive --exclude "*" --include "*-${WORKER_ID}.log"
+
+              chmod 0777 -R /tmp/logs
+
+              if [ ! -z $RESUME ]; then
+                echo "Detected a resume initiated by the user."
+                aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive --exclude "*" --include "simulation.cancel"
+              fi
+
+              bash /tmp/gpu_utils/get_gpu_uuid.sh > /tmp/gpu_utils/gpu.txt
+          env:
+            - name: SUBMISSION_ID
+              value.$: $.submission.submission_id
+            - name: WORKER_ID
+              value.$: $.parallelization.worker_id
+            - name: S3_BUCKET
+              value.$: "$.aws.s3_bucket"
+            - name: RESUME
+              value.$: $.submission.resume
+          volumeMounts:
+            - mountPath: /tmp/leaderboard
+              name: leaderboard
+            - mountPath: /tmp/scenario_runner
+              name: scenario-runner
+            - mountPath: /tmp/CARLA
+              name: carla-python-api
+            - mountPath: /tmp/gpu_utils
+              name: gpu-utils
+            - mountPath: /tmp/logs
+              name: logs
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+
+      containers:
+        
+        - name: simulator
+          image.$: $.cluster.simulator_image
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              export NVIDIA_VISIBLE_DEVICES=$(/gpu/get_gpu_device.sh)
+              bash /home/carla/run_carla.sh
+          env:
+            - name: WORKER_ID
+              value.$: $.parallelization.worker_id
+          volumeMounts:
+            - mountPath: /gpu
+              name: gpu-utils
+            - mountPath: /tmp/logs
+              name: logs
+              subPath: logs
+            - mountPath: /home/carla/recorder
+              name: logs
+              subPath: recorder
+            - mountPath: /tmp/status
+              name: logs
+              subPath: containers-status
+
+        - name: agent
+          image.$: $.submission.submitted_image_uri
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              export NVIDIA_VISIBLE_DEVICES=$(/gpu/get_gpu_device.sh)
+              bash /workspace/leaderboard/run_leaderboard.sh
+          env:
+            - name: WORKER_ID
+              value.$: $.parallelization.worker_id
+            - name: CHALLENGE_TRACK_CODENAME
+              value.$: $.submission.track_codename
+            - name: ROUTES_SUBSET
+              value.$: $.submission.subset
+            - name: ROUTES
+              value: /workspace/leaderboard/data/routes_testing.xml
+            - name: SCENARIOS
+              value: /workspace/leaderboard/data/all_towns_traffic_scenarios_private.json
+            - name: REPETITIONS
+              value: "5"
+            - name: RESUME
+              value.$: $.submission.resume
+          volumeMounts:
+            - mountPath: /workspace/leaderboard
+              name: leaderboard
+            - mountPath: /workspace/scenario_runner
+              name: scenario-runner
+            - mountPath: /workspace/CARLA
+              name: carla-python-api
+            - mountPath: /gpu
+              name: gpu-utils
+            - mountPath: /tmp/logs
+              name: logs
+              subPath: logs
+            - mountPath: /tmp/agent
+              name: logs
+              subPath: agent
+            - mountPath: /tmp/status
+              name: logs
+              subPath: containers-status
+
+        - name: aws-uploader
+          image.$: $.cluster.uploader_image
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              bash /workspace/run_uploader.sh
+          env:
+            - name: WORKER_ID
+              value.$: $.parallelization.worker_id
+            - name: SUBMISSION_ID
+              value.$: $.submission.submission_id
+            - name: S3_BUCKET
+              value.$: "$.aws.s3_bucket"
+          volumeMounts:
+            - mountPath: /logs
+              name: logs
+
+      restartPolicy: OnFailure
+      volumes:
+        - name: leaderboard
+          emptyDir: {}
+        - name: scenario-runner
+          emptyDir: {}
+        - name: carla-python-api
+          emptyDir: {}
+        - name: gpu-utils
+          emptyDir: {}
+        - name: logs
+          emptyDir: {}

@@ -1,16 +1,17 @@
 #!/bin/bash
 
 # Get the file names of this attempt
-ID=$(($NVIDIA_VISIBLE_DEVICES + 1))
+ID="$WORKER_ID"
 CRASH_ID=$(find /tmp/status -name *agent-$ID.crash* | wc -l)
+AGENT_LOGS="/tmp/logs/agent-$ID.log"
 AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$CRASH_ID"
 AGENT_DONE_FILE="/tmp/status/agent-$ID.done"
 SIMULATOR_CRASH_FILE="/tmp/status/simulator-$ID.crash$CRASH_ID"
 SIMULATOR_DONE_FILE="/tmp/status/simulator-$ID.done"
-SIMULATION_CANCEL_FILE="/tmp/status/simulation.cancel"
+SIMULATION_CANCEL_FILE="/tmp/status/simulation-$ID.cancel"
 
-LEADERBOARD_LOGS=/tmp/agent/leaderboard.log
-AGENT_RESULTS=/tmp/agent/agent_results.json
+AGENT_RESULTS="/tmp/agent/partial_agent_results$ID.json"
+
 MAX_IDLE=800
 
 #######################
@@ -19,14 +20,11 @@ MAX_IDLE=800
 export CARLA_ROOT="/workspace/CARLA"
 export SCENARIO_RUNNER_ROOT="/workspace/scenario_runner"
 export LEADERBOARD_ROOT="/workspace/leaderboard"
-export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/:${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
+export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/dist/$(ls ${CARLA_ROOT}/PythonAPI/carla/dist | grep py3.):${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 
 ############################
 ## LEADERBOARD PARAMETERS ##
 ############################
-[[ -z "${CARLA_PORT}" ]]                && export CARLA_PORT="2000"
-export CARLA_TM_PORT=$(($CARLA_PORT + 10))
-
 [[ -z "${CHALLENGE_TRACK_CODENAME}" ]]  && export CHALLENGE_TRACK_CODENAME="SENSORS"
 [[ -z "${ROUTES}" ]]                    && export ROUTES="/workspace/leaderboard/data/routes_testing.xml"
 [[ -z "${SCENARIOS}" ]]                 && export SCENARIOS="/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
@@ -34,14 +32,27 @@ export CARLA_TM_PORT=$(($CARLA_PORT + 10))
 [[ -z "${RESUME}" ]]                    && export RESUME=""
 
 export CHECKPOINT_ENDPOINT="$AGENT_RESULTS"
-export RECORD_PATH="/home/carla/CarlaUE4/Saved"
+export RECORD_PATH="/home/carla/recorder"
 export DEBUG_CHALLENGE="0"
 
 ############################
 ## LEADERBOARD EXECUTION  ##
 ############################
-# Check for any previous trial. If so resume
+
+# Save all the outpus into a file, which will be sent to s3
+exec > >(tee -a "$AGENT_LOGS") 2>&1
+
+if [ -f "$AGENT_LOGS" ]; then
+    echo ""
+    echo "Found partial agent logs"
+fi
+
 echo ""
+UUID=$(cat /gpu/gpu.txt)
+echo "Using GPU: ${UUID} (${NVIDIA_VISIBLE_DEVICES})"
+echo ""
+
+# Check for any previous trial. If so resume
 if [ $CRASH_ID -gt 0 ]; then
     PREVIOUS_AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$(($CRASH_ID - 1))"
     if [ -f $PREVIOUS_AGENT_CRASH_FILE ]; then
@@ -50,6 +61,13 @@ if [ $CRASH_ID -gt 0 ]; then
     fi
 else
     echo "Found no agent failure file"
+fi
+
+if [ -f "$AGENT_RESULTS" ]; then
+    echo "Found partial agent results file. Resuming..."
+    export RESUME="1"
+    cat $AGENT_RESULTS
+    echo ""
 fi
 
 # Get the modification date of a file
@@ -102,8 +120,6 @@ echo "Starting the Leaderboard"
 # To ensure the Leaderboard never blocks, run it in the background (Done using the '&' at the end)
 # while monitoring the changes to the results to know when it has finished.
 python3 -u ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator.py \
-    --port=${CARLA_PORT} \
-    --trafficManagerPort=${CARLA_TM_PORT} \
     --agent=${TEAM_AGENT} \
     --agent-config=${TEAM_CONFIG} \
     --track=${CHALLENGE_TRACK_CODENAME} \
@@ -114,12 +130,12 @@ python3 -u ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator.py \
     --resume=${RESUME} \
     --checkpoint=${CHECKPOINT_ENDPOINT} \
     --record=${RECORD_PATH} \
-    --debug=${DEBUG_CHALLENGE} |& tee $LEADERBOARD_LOGS &
+    --debug=${DEBUG_CHALLENGE} &
 
 while sleep 5 ; do
-    if [ "$(file_age $LEADERBOARD_LOGS)" -gt "$MAX_IDLE" ]; then
+    if [ "$(file_age $AGENT_LOGS)" -gt "$MAX_IDLE" ]; then
         echo ""
-        echo "Detected no new outputs for $LEADERBOARD_LOGS during $MAX_IDLE seconds. Stopping..."
+        echo "Detected no new outputs for $AGENT_LOGS during $MAX_IDLE seconds. Stopping..."
         break
     fi
     if ! pgrep -f leaderboard_evaluator | egrep -q -v '^1$'; then

@@ -38,7 +38,7 @@ then
     echo "Error $CARLA_ROOT is empty. Set \$CARLA_ROOT as an environment variable first."
     exit 1
 fi
-echo "Using the CARLA version at '$CARLA_ROOT'"
+echo "Using CARLA version: '$CARLA_ROOT'"
 
 if [ -z "$CHALLENGE_CONTENTS_ROOT" ]
 then echo "Error $CHALLENGE_CONTENTS_ROOT is empty. Set \$CHALLENGE_CONTENTS_ROOT as an environment variable first."
@@ -67,11 +67,11 @@ cp ${CHALLENGE_CONTENTS_ROOT}/src/leaderboard_20/data/* .lbtmp/leaderboard/data
 cp ${CHALLENGE_CONTENTS_ROOT}/src/leaderboard_20/data/parked_vehicles.py .lbtmp/leaderboard/leaderboard/utils/parked_vehicles.py
 cp ${SCRIPT_DIR}/run_leaderboard.sh .lbtmp/leaderboard/
 
+echo "Copying GPU utils"
+cp -fr ${SCRIPT_DIR}/gpu_utils .lbtmp
+
 # build docker image
 echo "Building docker"
-docker build --force-rm --build-arg HTTP_PROXY=${HTTP_PROXY} \
-    --build-arg HTTPS_PROXY=${HTTPS_PROXY} \
-    --build-arg http_proxy=${http_proxy} \
-    -t ${TARGET_NAME} -f ${SCRIPT_DIR}/Dockerfile .lbtmp
+docker build --force-rm -t ${TARGET_NAME} -f ${SCRIPT_DIR}/Dockerfile .lbtmp
 
 rm -fr .lbtmp

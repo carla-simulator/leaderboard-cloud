@@ -1,5 +1,5 @@
 {
-  "Comment": "Leaderboard state machine",
+  "Comment": "A description of my state machine",
   "StartAt": "PreEKS",
   "States": {
     "PreEKS": {
@@ -7,8 +7,8 @@
       "Resource": "arn:aws:states:::lambda:invoke",
       "OutputPath": "$.Payload",
       "Parameters": {
-        "FunctionName": "arn:aws:lambda:us-west-2:342236305043:function:preEKS:$LATEST",
-        "Payload.$": "$"
+        "Payload.$": "$",
+        "FunctionName": "arn:aws:lambda:us-west-2:342236305043:function:stagingPreEKS:$LATEST"
       },
       "Retry": [
         {
@@ -18,1372 +18,784 @@
             "Lambda.SdkClientException",
             "Lambda.TooManyRequestsException"
           ],
-          "IntervalSeconds": 2,
-          "MaxAttempts": 6,
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
           "BackoffRate": 2
         }
       ],
-      "Next": "DynamoDB Submissions PutItem",
+      "Next": "Check Eligibility",
       "InputPath": "$[0]"
     },
-    "DynamoDB Submissions PutItem": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::dynamodb:putItem",
-      "Parameters": {
-        "TableName.$": "$.aws.dynamodb_submissions_table",
-        "Item": {
-          "submission_id": {
-            "S.$": "$.submission.submission_id"
-          },
-          "team_id": {
-            "S.$": "$.submission.team_id"
-          },
-          "team_name": {
-            "S.$": "$.submission.team_name"
-          },
-          "submission_status": {
-            "S.$": "$.submission.submission_status"
-          },
-          "track_id": {
-            "S.$": "$.submission.track_id"
-          },
-          "track_name": {
-            "S.$": "$.submission.track_codename"
-          },
-          "submitted_image_uri": {
-            "S.$": "$.submission.submitted_image_uri"
-          },
-          "submitted_time": {
-            "S.$": "$.submission.submitted_time"
-          },
-          "start_time": {
-            "S.$": "$.submission.start_time"
-          },
-          "end_time": {
-            "S.$": "$.submission.end_time"
-          }
-        }
-      },
-      "Next": "Choice Status 1",
-      "ResultPath": null
-    },
-    "Choice Status 1": {
-      "Type": "Choice",
-      "Default": "PostEKS",
-      "Choices": [
-        {
-          "Or": [
-            {
-              "Variable": "$.submission.submission_status",
-              "StringEquals": "SUBMITTED"
-            },
-            {
-              "Variable": "$.submission.submission_status",
-              "StringEquals": "RESUMING"
-            }
-          ],
-          "Next": "Choice Cluster"
-        }
-      ]
-    },
-    "Choice Cluster": {
+    "Check Eligibility": {
       "Type": "Choice",
       "Choices": [
         {
-          "Variable": "$.cluster.id",
-          "StringEquals": "leaderboard-10",
-          "Next": "EKS RunJob L1"
+          "Not": {
+            "Variable": "$.is_eligible",
+            "BooleanEquals": true
+          },
+          "Next": "PostEKS"
         }
       ],
-      "Default": "EKS RunJob L2"
+      "Default": "Parallel"
     },
-    "EKS RunJob L1": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::eks:runJob.sync",
-      "Parameters": {
-        "ClusterName.$": "$.cluster.name",
-        "CertificateAuthority.$": "$.cluster.certificate_authority",
-        "Endpoint.$": "$.cluster.endpoint",
-        "Job": {
-          "apiVersion": "batch/v1",
-          "kind": "Job",
-          "metadata": {
-            "name.$": "$.submission.name"
-          },
-          "spec": {
-            "backoffLimit": 8,
-            "template": {
-              "spec": {
-                "serviceAccountName": "submission-worker",
-                "nodeSelector": {
-                  "node.kubernetes.io/instance-type": "g5.12xlarge"
+    "Parallel": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "PreParallel",
+          "States": {
+            "PreParallel": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "arn:aws:lambda:us-west-2:342236305043:function:stagingPreParallel:$LATEST"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Check Leaderboard"
+            },
+            "Check Leaderboard": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.data.cluster.id",
+                  "StringEquals": "leaderboard-10",
+                  "Next": "Map L1"
+                }
+              ],
+              "Default": "Map L2"
+            },
+            "Map L1": {
+              "Type": "Map",
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "INLINE"
                 },
-                "initContainers": [
-                  {
-                    "name": "private-contents",
-                    "image.$": "$.cluster.leaderboard_image",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "cp -r ${LEADERBOARD_ROOT}/* /tmp/leaderboard/\ncp -r ${SCENARIO_RUNNER_ROOT}/* /tmp/scenario_runner/\ncp -r ${CARLA_PYTHON_API_ROOT}/* /tmp/CARLA/\n\nif [ -z $RESUME ]; then\n  echo \"Detected a normal run, creating log files\"\n  mkdir -m 0777 -p /tmp/logs/agent/agent{1..4}\n  mkdir -m 0777 -p /tmp/logs/simulator\n  mkdir -m 0777 -p /tmp/logs/logcopy\n  mkdir -m 0777 -p /tmp/logs/containers-status\n  mkdir -m 0777 -p /tmp/logs/evalai\nelse\n  echo \"Detected a resume, download log files from S3, and removing the container status data\"\n  aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive\n  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID} /tmp/logs\n  mkdir -m 0777 -p /tmp/logs/containers-status\nfi\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "SUBMISSION_ID",
-                        "value.$": "$.submission.submission_id"
-                      },
-                      {
-                        "name": "RESUME",
-                        "value.$": "$.submission.resume"
-                      },
-                      {
-                        "name": "S3_BUCKET",
-                        "value.$": "$.aws.s3_bucket"
+                "StartAt": "EKS RunJob Stack L1",
+                "States": {
+                  "EKS RunJob Stack L1": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::eks:runJob.sync",
+                    "Parameters": {
+                      "ClusterName.$": "$.data.cluster.name",
+                      "CertificateAuthority.$": "$.data.cluster.certificate_authority",
+                      "Endpoint.$": "$.data.cluster.endpoint",
+                      "Job": {
+                        "apiVersion": "batch/v1",
+                        "kind": "Job",
+                        "metadata": {
+                          "name.$": "$.data.submission.name"
+                        },
+                        "spec": {
+                          "backoffLimit": 2,
+                          "template": {
+                            "spec": {
+                              "serviceAccountName": "submission-worker",
+                              "nodeSelector": {
+                                "node.kubernetes.io/instance-type": "$.data.cluster.instance_type"
+                              },
+                              "initContainers": [
+                                {
+                                  "name": "private-contents",
+                                  "image.$": "$.data.cluster.leaderboard_image",
+                                  "command": [
+                                    "/bin/bash",
+                                    "-c"
+                                  ],
+                                  "args": [
+                                    "cp -r ${LEADERBOARD_ROOT}/* /tmp/leaderboard/\ncp -r ${SCENARIO_RUNNER_ROOT}/* /tmp/scenario_runner/\ncp -r ${CARLA_PYTHON_API_ROOT}/* /tmp/CARLA/\ncp -r ${GPU_UTILS_ROOT}/* /tmp/gpu_utils\n\nif [ -z $RESUME ]; then\n  echo \"Detected a normal run, creating log files\"\n  mkdir -m 0777 -p /tmp/logs/agent\n  mkdir -m 0777 -p /tmp/logs/simulator\n  mkdir -m 0777 -p /tmp/logs/uploader\n  mkdir -m 0777 -p /tmp/logs/containers-status\nelse\n  echo \"Detected a resume, download log files from S3, and removing the container status data\"\n  #Descargar solo el merge results.json y ponerlo en /tmp/logs/agent?\n  # Q hacer con los agent1/leaderboard.log ....\n  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/agent/results.json /tmp/logs/agent/results.json\n  aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive\nfi\n\nbash /tmp/gpu_utils/get_gpu_uuid.sh > /tmp/gpu_utils/gpu.txt\n"
+                                  ],
+                                  "env": [
+                                    {
+                                      "name": "SUBMISSION_ID",
+                                      "value.$": "$.data.submission.submission_id"
+                                    },
+                                    {
+                                      "name": "RESUME",
+                                      "value.$": "$.data.submission.resume"
+                                    },
+                                    {
+                                      "name": "S3_BUCKET",
+                                      "value.$": "$.data.aws.s3_bucket"
+                                    }
+                                  ],
+                                  "volumeMounts": [
+                                    {
+                                      "mountPath": "/tmp/leaderboard",
+                                      "name": "leaderboard"
+                                    },
+                                    {
+                                      "mountPath": "/tmp/scenario_runner",
+                                      "name": "scenario-runner"
+                                    },
+                                    {
+                                      "mountPath": "/tmp/CARLA",
+                                      "name": "carla-python-api"
+                                    },
+                                    {
+                                      "mountPath": "/tmp/gpu_utils",
+                                      "name": "gpu-utils"
+                                    },
+                                    {
+                                      "mountPath": "/tmp/logs",
+                                      "name": "logs"
+                                    }
+                                  ],
+                                  "resources": {
+                                    "limits": {
+                                      "nvidia.com/gpu": 1
+                                    }
+                                  }
+                                }
+                              ],
+                              "containers": [
+                                {
+                                  "name": "simulator",
+                                  "image.$": "$.data.cluster.simulator_image",
+                                  "command": [
+                                    "/bin/bash",
+                                    "-c"
+                                  ],
+                                  "args": [
+                                    "export NVIDIA_VISIBLE_DEVICES=$(/gpu/get_gpu_device.sh)\nbash /home/carla/run_carla.sh\n"
+                                  ],
+                                  "env": [
+                                    {
+                                      "name": "WORKER_ID",
+                                      "value.$": "$.data.parallelization.worker_id"
+                                    }
+                                  ],
+                                  "volumeMounts": [
+                                    {
+                                      "mountPath": "/gpu",
+                                      "name": "gpu-utils"
+                                    },
+                                    {
+                                      "mountPath": "/home/carla/CarlaUE4/Saved",
+                                      "name": "logs",
+                                      "subPath": "simulator"
+                                    },
+                                    {
+                                      "mountPath": "/tmp/status",
+                                      "name": "logs",
+                                      "subPath": "containers-status"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "agent",
+                                  "image.$": "$.data.submission.submitted_image_uri",
+                                  "command": [
+                                    "/bin/bash",
+                                    "-c"
+                                  ],
+                                  "args": [
+                                    "export NVIDIA_VISIBLE_DEVICES=$(/gpu/get_gpu_device.sh)\nbash /workspace/leaderboard/run_leaderboard.sh\n"
+                                  ],
+                                  "env": [
+                                    {
+                                      "name": "WORKER_ID",
+                                      "value.$": "$.data.parallelization.worker_id"
+                                    },
+                                    {
+                                      "name": "CHALLENGE_TRACK_CODENAME",
+                                      "value.$": "$.data.submission.track_codename"
+                                    },
+                                    {
+                                      "name": "ROUTES_SUBSET",
+                                      "value.$": "$.data.submission.subset"
+                                    },
+                                    {
+                                      "name": "REPETITIONS",
+                                      "value": "5"
+                                    },
+                                    {
+                                      "name": "RESUME",
+                                      "value.$": "$.data.submission.resume"
+                                    }
+                                  ],
+                                  "volumeMounts": [
+                                    {
+                                      "mountPath": "/workspace/leaderboard",
+                                      "name": "leaderboard"
+                                    },
+                                    {
+                                      "mountPath": "/workspace/scenario_runner",
+                                      "name": "scenario-runner"
+                                    },
+                                    {
+                                      "mountPath": "/workspace/CARLA",
+                                      "name": "carla-python-api"
+                                    },
+                                    {
+                                      "mountPath": "/gpu",
+                                      "name": "gpu-utils"
+                                    },
+                                    {
+                                      "mountPath": "/tmp/agent",
+                                      "name": "logs",
+                                      "subPath": "agent"
+                                    },
+                                    {
+                                      "mountPath": "/tmp/status",
+                                      "name": "logs",
+                                      "subPath": "containers-status"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "aws-uploader",
+                                  "image.$": "$.data.cluster.uploader_image",
+                                  "command": [
+                                    "/bin/bash",
+                                    "-c"
+                                  ],
+                                  "args": [
+                                    "bash /workspace/run_uploader.sh\n"
+                                  ],
+                                  "env": [
+                                    {
+                                      "name": "WORKER_ID",
+                                      "value.$": "$.data.parallelization.worker_id"
+                                    },
+                                    {
+                                      "name": "SUBMISSION_ID",
+                                      "value.$": "$.data.submission.submission_id"
+                                    },
+                                    {
+                                      "name": "S3_BUCKET",
+                                      "value.$": "$.data.aws.s3_bucket"
+                                    }
+                                  ],
+                                  "volumeMounts": [
+                                    {
+                                      "mountPath": "/logs",
+                                      "name": "logs"
+                                    }
+                                  ]
+                                }
+                              ],
+                              "restartPolicy": "OnFailure",
+                              "volumes": [
+                                {
+                                  "name": "leaderboard",
+                                  "emptyDir": {}
+                                },
+                                {
+                                  "name": "scenario-runner",
+                                  "emptyDir": {}
+                                },
+                                {
+                                  "name": "carla-python-api",
+                                  "emptyDir": {}
+                                },
+                                {
+                                  "name": "gpu-utils",
+                                  "emptyDir": {}
+                                },
+                                {
+                                  "name": "logs",
+                                  "emptyDir": {}
+                                }
+                              ]
+                            }
+                          }
+                        }
                       }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/tmp/leaderboard",
-                        "name": "leaderboard"
-                      },
-                      {
-                        "mountPath": "/tmp/scenario_runner",
-                        "name": "scenario-runner"
-                      },
-                      {
-                        "mountPath": "/tmp/CARLA",
-                        "name": "carla-python-api"
-                      },
-                      {
-                        "mountPath": "/tmp/logs",
-                        "name": "logs"
+                    },
+                    "Next": "EKS RemoveJob Stack L1",
+                    "ResultPath": null
+                  },
+                  "EKS RemoveJob Stack L1": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::eks:call",
+                    "Parameters": {
+                      "ClusterName.$": "$.data.cluster.name",
+                      "CertificateAuthority.$": "$.data.cluster.certificate_authority",
+                      "Endpoint.$": "$.data.cluster.endpoint",
+                      "Method": "DELETE",
+                      "Path.$": "States.Format('/apis/batch/v1/namespaces/default/jobs/{}', $.data.submission.name)",
+                      "QueryParameters": {
+                        "propagationPolicy": [
+                          "Foreground"
+                        ]
                       }
-                    ]
+                    },
+                    "End": true
                   }
-                ],
-                "containers": [
-                  {
-                    "name": "simulator-1",
-                    "image.$": "$.cluster.simulator_image",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /home/carla/run_carla.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2000"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "0"
+                }
+              },
+              "End": true
+            },
+            "Map L2": {
+              "Type": "Map",
+              "ItemProcessor": {
+                "ProcessorConfig": {
+                  "Mode": "DISTRIBUTED",
+                  "ExecutionType": "STANDARD"
+                },
+                "StartAt": "EKS RunJob Stack L2",
+                "States": {
+                  "EKS RunJob Stack L2": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::eks:runJob.sync",
+                    "Parameters": {
+                      "ClusterName.$": "$.data.cluster.name",
+                      "CertificateAuthority.$": "$.data.cluster.certificate_authority",
+                      "Endpoint.$": "$.data.cluster.endpoint",
+                      "Job": {
+                        "apiVersion": "batch/v1",
+                        "kind": "Job",
+                        "metadata": {
+                          "name.$": "$.data.submission.name"
+                        },
+                        "spec": {
+                          "backoffLimit": 2,
+                          "template": {
+                            "spec": {
+                              "serviceAccountName": "submission-worker",
+                              "nodeSelector": {
+                                "node.kubernetes.io/instance-type": "$.data.cluster.instance_type"
+                              },
+                              "initContainers": [
+                                {
+                                  "name": "private-contents",
+                                  "image.$": "$.data.cluster.leaderboard_image",
+                                  "command": [
+                                    "/bin/bash",
+                                    "-c"
+                                  ],
+                                  "args": [
+                                    "cp -r ${LEADERBOARD_ROOT}/* /tmp/leaderboard/\ncp -r ${SCENARIO_RUNNER_ROOT}/* /tmp/scenario_runner/\ncp -r ${CARLA_PYTHON_API_ROOT}/* /tmp/CARLA/\ncp -r ${GPU_UTILS_ROOT}/* /tmp/gpu_utils\n\nif [ -z $RESUME ]; then\n  echo \"Detected a normal run, creating log files\"\n  mkdir -m 0777 -p /tmp/logs/agent\n  mkdir -m 0777 -p /tmp/logs/simulator\n  mkdir -m 0777 -p /tmp/logs/uploader\n  mkdir -m 0777 -p /tmp/logs/containers-status\nelse\n  echo \"Detected a resume, download log files from S3, and removing the container status data\"\n  #Descargar solo el merge results.json y ponerlo en /tmp/logs/agent?\n  # Q hacer con los agent1/leaderboard.log ....\n  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID}/agent/results.json /tmp/logs/agent/results.json\n  aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive\nfi\n\nbash /tmp/gpu_utils/get_gpu_uuid.sh > /tmp/gpu_utils/gpu.txt\n"
+                                  ],
+                                  "env": [
+                                    {
+                                      "name": "SUBMISSION_ID",
+                                      "value.$": "$.data.submission.submission_id"
+                                    },
+                                    {
+                                      "name": "RESUME",
+                                      "value.$": "$.data.submission.resume"
+                                    },
+                                    {
+                                      "name": "S3_BUCKET",
+                                      "value.$": "$.data.aws.s3_bucket"
+                                    }
+                                  ],
+                                  "volumeMounts": [
+                                    {
+                                      "mountPath": "/tmp/leaderboard",
+                                      "name": "leaderboard"
+                                    },
+                                    {
+                                      "mountPath": "/tmp/scenario_runner",
+                                      "name": "scenario-runner"
+                                    },
+                                    {
+                                      "mountPath": "/tmp/CARLA",
+                                      "name": "carla-python-api"
+                                    },
+                                    {
+                                      "mountPath": "/tmp/gpu_utils",
+                                      "name": "gpu-utils"
+                                    },
+                                    {
+                                      "mountPath": "/tmp/logs",
+                                      "name": "logs"
+                                    }
+                                  ],
+                                  "resources": {
+                                    "limits": {
+                                      "nvidia.com/gpu": 1
+                                    }
+                                  }
+                                }
+                              ],
+                              "containers": [
+                                {
+                                  "name": "simulator",
+                                  "image.$": "$.data.cluster.simulator_image",
+                                  "command": [
+                                    "/bin/bash",
+                                    "-c"
+                                  ],
+                                  "args": [
+                                    "export NVIDIA_VISIBLE_DEVICES=$(/gpu/get_gpu_device.sh)\nbash /home/carla/run_carla.sh\n"
+                                  ],
+                                  "env": [
+                                    {
+                                      "name": "WORKER_ID",
+                                      "value.$": "$.data.parallelization.worker_id"
+                                    },
+                                    {
+                                      "name": "DISPLAY",
+                                      "value": ":0"
+                                    }
+                                  ],
+                                  "volumeMounts": [
+                                    {
+                                      "mountPath": "/tmp/.X11-unix",
+                                      "name": "x11"
+                                    },
+                                    {
+                                      "mountPath": "/gpu",
+                                      "name": "gpu-utils"
+                                    },
+                                    {
+                                      "mountPath": "/home/carla/CarlaUE4/Saved",
+                                      "name": "logs",
+                                      "subPath": "simulator"
+                                    },
+                                    {
+                                      "mountPath": "/tmp/status",
+                                      "name": "logs",
+                                      "subPath": "containers-status"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "agent",
+                                  "image.$": "$.data.submission.submitted_image_uri",
+                                  "command": [
+                                    "/bin/bash",
+                                    "-c"
+                                  ],
+                                  "args": [
+                                    "export NVIDIA_VISIBLE_DEVICES=$(/gpu/get_gpu_device.sh)\nbash /workspace/leaderboard/run_leaderboard.sh\n"
+                                  ],
+                                  "env": [
+                                    {
+                                      "name": "WORKER_ID",
+                                      "value.$": "$.data.parallelization.worker_id"
+                                    },
+                                    {
+                                      "name": "CHALLENGE_TRACK_CODENAME",
+                                      "value.$": "$.data.submission.track_codename"
+                                    },
+                                    {
+                                      "name": "ROUTES_SUBSET",
+                                      "value.$": "$.data.submission.subset"
+                                    },
+                                    {
+                                      "name": "REPETITIONS",
+                                      "value": "1"
+                                    },
+                                    {
+                                      "name": "RESUME",
+                                      "value.$": "$.data.submission.resume"
+                                    }
+                                  ],
+                                  "volumeMounts": [
+                                    {
+                                      "mountPath": "/workspace/leaderboard",
+                                      "name": "leaderboard"
+                                    },
+                                    {
+                                      "mountPath": "/workspace/scenario_runner",
+                                      "name": "scenario-runner"
+                                    },
+                                    {
+                                      "mountPath": "/workspace/CARLA",
+                                      "name": "carla-python-api"
+                                    },
+                                    {
+                                      "mountPath": "/gpu",
+                                      "name": "gpu-utils"
+                                    },
+                                    {
+                                      "mountPath": "/tmp/agent",
+                                      "name": "logs",
+                                      "subPath": "agent"
+                                    },
+                                    {
+                                      "mountPath": "/tmp/status",
+                                      "name": "logs",
+                                      "subPath": "containers-status"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "aws-uploader",
+                                  "image.$": "$.data.cluster.uploader_image",
+                                  "command": [
+                                    "/bin/bash",
+                                    "-c"
+                                  ],
+                                  "args": [
+                                    "bash /workspace/run_uploader.sh\n"
+                                  ],
+                                  "env": [
+                                    {
+                                      "name": "WORKER_ID",
+                                      "value.$": "$.data.parallelization.worker_id"
+                                    },
+                                    {
+                                      "name": "SUBMISSION_ID",
+                                      "value.$": "$.data.submission.submission_id"
+                                    },
+                                    {
+                                      "name": "S3_BUCKET",
+                                      "value.$": "$.data.aws.s3_bucket"
+                                    }
+                                  ],
+                                  "volumeMounts": [
+                                    {
+                                      "mountPath": "/logs",
+                                      "name": "logs"
+                                    }
+                                  ]
+                                }
+                              ],
+                              "restartPolicy": "OnFailure",
+                              "volumes": [
+                                {
+                                  "name": "leaderboard",
+                                  "emptyDir": {}
+                                },
+                                {
+                                  "name": "scenario-runner",
+                                  "emptyDir": {}
+                                },
+                                {
+                                  "name": "carla-python-api",
+                                  "emptyDir": {}
+                                },
+                                {
+                                  "name": "gpu-utils",
+                                  "emptyDir": {}
+                                },
+                                {
+                                  "name": "logs",
+                                  "emptyDir": {}
+                                },
+                                {
+                                  "name": "x11",
+                                  "hostPath": {
+                                    "path": "/tmp/.X11-unix"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
                       }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/home/carla/CarlaUE4/Saved",
-                        "name": "logs",
-                        "subPath": "simulator"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ],
-                    "securityContext": {
-                      "privileged": true
                     },
-                    "resources": {
-                      "limits": {
-                        "nvidia.com/gpu": 1
-                      }
-                    }
+                    "ResultPath": null,
+                    "Next": "EKS RemoveJob Stack L2"
                   },
-                  {
-                    "name": "agent-1",
-                    "image.$": "$.submission.submitted_image_uri",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /workspace/leaderboard/run_leaderboard.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2000"
-                      },
-                      {
-                        "name": "CHALLENGE_TRACK_CODENAME",
-                        "value.$": "$.submission.track_codename"
-                      },
-                      {
-                        "name": "ROUTES_SUBSET",
-                        "value": "0-4"
-                      },
-                      {
-                        "name": "ROUTES",
-                        "value": "/workspace/leaderboard/data/routes_testing.xml"
-                      },
-                      {
-                        "name": "SCENARIOS",
-                        "value": "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
-                      },
-                      {
-                        "name": "REPETITIONS",
-                        "value": "5"
-                      },
-                      {
-                        "name": "RESUME",
-                        "value.$": "$.submission.resume"
-                      },
-                      {
-                        "name": "NVIDIA_DRIVER_CAPABILITIES",
-                        "value": "all"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "0"
+                  "EKS RemoveJob Stack L2": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::eks:call",
+                    "Parameters": {
+                      "ClusterName.$": "$.data.cluster.name",
+                      "CertificateAuthority.$": "$.data.cluster.certificate_authority",
+                      "Endpoint.$": "$.data.cluster.endpoint",
+                      "Method": "DELETE",
+                      "Path.$": "States.Format('/apis/batch/v1/namespaces/default/jobs/{}', $.data.submission.name)",
+                      "QueryParameters": {
+                        "propagationPolicy": [
+                          "Foreground"
+                        ]
                       }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/workspace/leaderboard",
-                        "name": "leaderboard"
-                      },
-                      {
-                        "mountPath": "/workspace/scenario_runner",
-                        "name": "scenario-runner"
-                      },
-                      {
-                        "mountPath": "/workspace/CARLA",
-                        "name": "carla-python-api"
-                      },
-                      {
-                        "mountPath": "/tmp/agent",
-                        "name": "logs",
-                        "subPath": "agent/agent1"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "simulator-2",
-                    "image.$": "$.cluster.simulator_image",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /home/carla/run_carla.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2100"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "1"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/home/carla/CarlaUE4/Saved",
-                        "name": "logs",
-                        "subPath": "simulator"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ],
-                    "securityContext": {
-                      "privileged": true
                     },
-                    "resources": {
-                      "limits": {
-                        "nvidia.com/gpu": 1
-                      }
-                    }
-                  },
-                  {
-                    "name": "agent-2",
-                    "image.$": "$.submission.submitted_image_uri",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /workspace/leaderboard/run_leaderboard.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2100"
-                      },
-                      {
-                        "name": "CHALLENGE_TRACK_CODENAME",
-                        "value.$": "$.submission.track_codename"
-                      },
-                      {
-                        "name": "ROUTES_SUBSET",
-                        "value": "5-9"
-                      },
-                      {
-                        "name": "ROUTES",
-                        "value": "/workspace/leaderboard/data/routes_testing.xml"
-                      },
-                      {
-                        "name": "SCENARIOS",
-                        "value": "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
-                      },
-                      {
-                        "name": "REPETITIONS",
-                        "value": "5"
-                      },
-                      {
-                        "name": "RESUME",
-                        "value.$": "$.submission.resume"
-                      },
-                      {
-                        "name": "NVIDIA_DRIVER_CAPABILITIES",
-                        "value": "all"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "1"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/workspace/leaderboard",
-                        "name": "leaderboard"
-                      },
-                      {
-                        "mountPath": "/workspace/scenario_runner",
-                        "name": "scenario-runner"
-                      },
-                      {
-                        "mountPath": "/workspace/CARLA",
-                        "name": "carla-python-api"
-                      },
-                      {
-                        "mountPath": "/tmp/agent",
-                        "name": "logs",
-                        "subPath": "agent/agent2"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "simulator-3",
-                    "image.$": "$.cluster.simulator_image",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /home/carla/run_carla.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2200"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "2"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/home/carla/CarlaUE4/Saved",
-                        "name": "logs",
-                        "subPath": "simulator"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ],
-                    "securityContext": {
-                      "privileged": true
-                    },
-                    "resources": {
-                      "limits": {
-                        "nvidia.com/gpu": 1
-                      }
-                    }
-                  },
-                  {
-                    "name": "agent-3",
-                    "image.$": "$.submission.submitted_image_uri",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /workspace/leaderboard/run_leaderboard.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2200"
-                      },
-                      {
-                        "name": "CHALLENGE_TRACK_CODENAME",
-                        "value.$": "$.submission.track_codename"
-                      },
-                      {
-                        "name": "ROUTES_SUBSET",
-                        "value": "10-14"
-                      },
-                      {
-                        "name": "ROUTES",
-                        "value": "/workspace/leaderboard/data/routes_testing.xml"
-                      },
-                      {
-                        "name": "SCENARIOS",
-                        "value": "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
-                      },
-                      {
-                        "name": "REPETITIONS",
-                        "value": "5"
-                      },
-                      {
-                        "name": "RESUME",
-                        "value.$": "$.submission.resume"
-                      },
-                      {
-                        "name": "NVIDIA_DRIVER_CAPABILITIES",
-                        "value": "all"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "2"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/workspace/leaderboard",
-                        "name": "leaderboard"
-                      },
-                      {
-                        "mountPath": "/workspace/scenario_runner",
-                        "name": "scenario-runner"
-                      },
-                      {
-                        "mountPath": "/workspace/CARLA",
-                        "name": "carla-python-api"
-                      },
-                      {
-                        "mountPath": "/tmp/agent",
-                        "name": "logs",
-                        "subPath": "agent/agent3"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "simulator-4",
-                    "image.$": "$.cluster.simulator_image",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /home/carla/run_carla.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2300"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "3"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/home/carla/CarlaUE4/Saved",
-                        "name": "logs",
-                        "subPath": "simulator"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ],
-                    "securityContext": {
-                      "privileged": true
-                    },
-                    "resources": {
-                      "limits": {
-                        "nvidia.com/gpu": 1
-                      }
-                    }
-                  },
-                  {
-                    "name": "agent-4",
-                    "image.$": "$.submission.submitted_image_uri",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /workspace/leaderboard/run_leaderboard.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2300"
-                      },
-                      {
-                        "name": "CHALLENGE_TRACK_CODENAME",
-                        "value.$": "$.submission.track_codename"
-                      },
-                      {
-                        "name": "ROUTES_SUBSET",
-                        "value": "15-19"
-                      },
-                      {
-                        "name": "ROUTES",
-                        "value": "/workspace/leaderboard/data/routes_testing.xml"
-                      },
-                      {
-                        "name": "SCENARIOS",
-                        "value": "/workspace/leaderboard/data/all_towns_traffic_scenarios_private.json"
-                      },
-                      {
-                        "name": "REPETITIONS",
-                        "value": "5"
-                      },
-                      {
-                        "name": "RESUME",
-                        "value.$": "$.submission.resume"
-                      },
-                      {
-                        "name": "NVIDIA_DRIVER_CAPABILITIES",
-                        "value": "all"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "3"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/workspace/leaderboard",
-                        "name": "leaderboard"
-                      },
-                      {
-                        "mountPath": "/workspace/scenario_runner",
-                        "name": "scenario-runner"
-                      },
-                      {
-                        "mountPath": "/workspace/CARLA",
-                        "name": "carla-python-api"
-                      },
-                      {
-                        "mountPath": "/tmp/agent",
-                        "name": "logs",
-                        "subPath": "agent/agent4"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "logcopy",
-                    "image.$": "$.cluster.logcopy_image",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /workspace/run_logcopy.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CHALLENGE_ID",
-                        "value.$": "$.submission.challenge_id"
-                      },
-                      {
-                        "name": "SUBMISSION_ID",
-                        "value.$": "$.submission.submission_id"
-                      },
-                      {
-                        "name": "TRACK_ID",
-                        "value.$": "$.submission.track_id"
-                      },
-                      {
-                        "name": "TEAM_ID",
-                        "value.$": "$.submission.team_id"
-                      },
-                      {
-                        "name": "S3_BUCKET",
-                        "value.$": "$.aws.s3_bucket"
-                      },
-                      {
-                        "name": "DYNAMODB_SUBMISSIONS_TABLE",
-                        "value.$": "$.aws.dynamodb_submissions_table"
-                      },
-                      {
-                        "name": "EVALAI_AUTH_TOKEN",
-                        "value.$": "$.evalai.auth_token"
-                      },
-                      {
-                        "name": "EVALAI_API_SERVER",
-                        "value.$": "$.evalai.api_server"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/logs",
-                        "name": "logs"
-                      },
-                      {
-                        "mountPath": "/utils/leaderboard",
-                        "name": "leaderboard"
-                      },
-                      {
-                        "mountPath": "/utils/scenario_runner",
-                        "name": "scenario-runner"
-                      }
-                    ]
+                    "End": true,
+                    "ResultPath": null
                   }
-                ],
-                "restartPolicy": "OnFailure",
-                "volumes": [
-                  {
-                    "name": "leaderboard",
-                    "emptyDir": {}
+                }
+              },
+              "End": true,
+              "Label": "MapL2",
+              "MaxConcurrency": 4
+            }
+          }
+        },
+        {
+          "StartAt": "PreMonitor",
+          "States": {
+            "PreMonitor": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "arn:aws:lambda:us-west-2:342236305043:function:stagingPreMonitor:$LATEST"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "EKS RunJob Monitor"
+            },
+            "EKS RunJob Monitor": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::eks:runJob.sync",
+              "Parameters": {
+                "ClusterName.$": "$.data.cluster.name",
+                "CertificateAuthority.$": "$.data.cluster.certificate_authority",
+                "Endpoint.$": "$.data.cluster.endpoint",
+                "Job": {
+                  "apiVersion": "batch/v1",
+                  "kind": "Job",
+                  "metadata": {
+                    "name.$": "$.data.submission.name"
                   },
-                  {
-                    "name": "scenario-runner",
-                    "emptyDir": {}
-                  },
-                  {
-                    "name": "carla-python-api",
-                    "emptyDir": {}
-                  },
-                  {
-                    "name": "logs",
-                    "emptyDir": {}
+                  "spec": {
+                    "backoffLimit": 8,
+                    "template": {
+                      "spec": {
+                        "serviceAccountName": "submission-worker",
+                        "nodeSelector": {
+                          "node.kubernetes.io/instance-type": "$.data.cluster.instance_type"
+                        },
+                        "initContainers": [
+                          {
+                            "name": "private-contents",
+                            "image.$": "$.data.cluster.leaderboard_image",
+                            "command": [
+                              "/bin/bash",
+                              "-c"
+                            ],
+                            "args": [
+                              "cp -r ${LEADERBOARD_ROOT}/* /tmp/leaderboard/\ncp -r ${SCENARIO_RUNNER_ROOT}/* /tmp/scenario_runner/\n"
+                            ],
+                            "volumeMounts": [
+                              {
+                                "mountPath": "/tmp/leaderboard",
+                                "name": "leaderboard"
+                              },
+                              {
+                                "mountPath": "/tmp/scenario_runner",
+                                "name": "scenario-runner"
+                              }
+                            ]
+                          }
+                        ],
+                        "containers": [
+                          {
+                            "name": "monitor",
+                            "image.$": "$.data.cluster.monitor_image",
+                            "command": [
+                              "/bin/bash",
+                              "-c"
+                            ],
+                            "args": [
+                              "bash /workspace/run_monitor.sh\n"
+                            ],
+                            "env": [
+                              {
+                                "name": "SUBMISSION_ID",
+                                "value.$": "$.data.submission.submission_id"
+                              },
+                              {
+                                "name": "SUBMISSION_WORKERS",
+                                "value.$": "$.data.parallelization.workers"
+                              },
+                              {
+                                "name": "CHALLENGE_ID",
+                                "value.$": "$.data.submission.challenge_id"
+                              },
+                              {
+                                "name": "TRACK_ID",
+                                "value.$": "$.data.submission.track_id"
+                              },
+                              {
+                                "name": "TEAM_ID",
+                                "value.$": "$.data.submission.team_id"
+                              },
+                              {
+                                "name": "S3_BUCKET",
+                                "value.$": "$.data.aws.s3_bucket"
+                              },
+                              {
+                                "name": "DYNAMODB_SUBMISSIONS_TABLE",
+                                "value.$": "$.data.aws.dynamodb_submissions_table"
+                              },
+                              {
+                                "name": "EVALAI_AUTH_TOKEN",
+                                "value.$": "$.data.evalai.auth_token"
+                              },
+                              {
+                                "name": "EVALAI_API_SERVER",
+                                "value.$": "$.data.evalai.api_server"
+                              }
+                            ],
+                            "volumeMounts": [
+                              {
+                                "mountPath": "/utils/leaderboard",
+                                "name": "leaderboard"
+                              },
+                              {
+                                "mountPath": "/utils/scenario_runner",
+                                "name": "scenario-runner"
+                              }
+                            ]
+                          }
+                        ],
+                        "restartPolicy": "OnFailure",
+                        "volumes": [
+                          {
+                            "name": "leaderboard",
+                            "emptyDir": {}
+                          },
+                          {
+                            "name": "scenario-runner",
+                            "emptyDir": {}
+                          }
+                        ]
+                      }
+                    }
                   }
-                ]
-              }
+                }
+              },
+              "ResultPath": null,
+              "Next": "EKS RemoveJob Monitor"
+            },
+            "EKS RemoveJob Monitor": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::eks:call",
+              "Parameters": {
+                "ClusterName.$": "$.data.cluster.name",
+                "CertificateAuthority.$": "$.data.cluster.certificate_authority",
+                "Endpoint.$": "$.data.cluster.endpoint",
+                "Method": "DELETE",
+                "Path.$": "States.Format('/apis/batch/v1/namespaces/default/jobs/{}', $.data.submission.name)",
+                "QueryParameters": {
+                  "propagationPolicy": [
+                    "Foreground"
+                  ]
+                }
+              },
+              "End": true,
+              "ResultPath": null
             }
           }
         }
-      },
-      "Next": "EKS RemoveJob",
-      "ResultPath": null,
-      "Catch": [
-        {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
-          "Next": "EKS RemoveJob",
-          "ResultPath": null
-        }
-      ]
-    },
-    "EKS RunJob L2": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::eks:runJob.sync",
-      "Parameters": {
-        "ClusterName.$": "$.cluster.name",
-        "CertificateAuthority.$": "$.cluster.certificate_authority",
-        "Endpoint.$": "$.cluster.endpoint",
-        "Job": {
-          "apiVersion": "batch/v1",
-          "kind": "Job",
-          "metadata": {
-            "name.$": "$.submission.name"
-          },
-          "spec": {
-            "backoffLimit": 8,
-            "template": {
-              "spec": {
-                "serviceAccountName": "submission-worker",
-                "nodeSelector": {
-                  "node.kubernetes.io/instance-type": "g5.12xlarge"
-                },
-                "initContainers": [
-                  {
-                    "name": "private-contents",
-                    "image.$": "$.cluster.leaderboard_image",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "cp -r ${LEADERBOARD_ROOT}/* /tmp/leaderboard/\ncp -r ${SCENARIO_RUNNER_ROOT}/* /tmp/scenario_runner/\ncp -r ${CARLA_PYTHON_API_ROOT}/* /tmp/CARLA/\n\nif [ -z $RESUME ]; then\n  echo \"Detected a normal run, creating log files\"\n  mkdir -m 0777 -p /tmp/logs/agent/agent{1..4}\n  mkdir -m 0777 -p /tmp/logs/simulator\n  mkdir -m 0777 -p /tmp/logs/logcopy\n  mkdir -m 0777 -p /tmp/logs/containers-status\n  mkdir -m 0777 -p /tmp/logs/evalai\nelse\n  echo \"Detected a resume, download log files from S3, and removing the container status data\"\n  aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive\n  aws s3 sync s3://${S3_BUCKET}/${SUBMISSION_ID} /tmp/logs\n  mkdir -m 0777 -p /tmp/logs/containers-status\nfi\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "SUBMISSION_ID",
-                        "value.$": "$.submission.submission_id"
-                      },
-                      {
-                        "name": "RESUME",
-                        "value.$": "$.submission.resume"
-                      },
-                      {
-                        "name": "S3_BUCKET",
-                        "value.$": "$.aws.s3_bucket"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/tmp/leaderboard",
-                        "name": "leaderboard"
-                      },
-                      {
-                        "mountPath": "/tmp/scenario_runner",
-                        "name": "scenario-runner"
-                      },
-                      {
-                        "mountPath": "/tmp/CARLA",
-                        "name": "carla-python-api"
-                      },
-                      {
-                        "mountPath": "/tmp/logs",
-                        "name": "logs"
-                      }
-                    ]
-                  }
-                ],
-                "containers": [
-                  {
-                    "name": "simulator-1",
-                    "image.$": "$.cluster.simulator_image",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /home/carla/run_carla.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2000"
-                      },
-                      {
-                        "name": "DISPLAY",
-                        "value": ":0"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "0"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/tmp/.X11-unix",
-                        "name": "x11"
-                      },
-                      {
-                        "mountPath": "/home/carla/CarlaUE4/Saved",
-                        "name": "logs",
-                        "subPath": "simulator"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ],
-                    "securityContext": {
-                      "privileged": true
-                    },
-                    "resources": {
-                      "limits": {
-                        "nvidia.com/gpu": 1
-                      }
-                    }
-                  },
-                  {
-                    "name": "agent-1",
-                    "image.$": "$.submission.submitted_image_uri",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /workspace/leaderboard/run_leaderboard.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2000"
-                      },
-                      {
-                        "name": "CHALLENGE_TRACK_CODENAME",
-                        "value.$": "$.submission.track_codename"
-                      },
-                      {
-                        "name": "ROUTES_SUBSET",
-                        "value": "0-4"
-                      },
-                      {
-                        "name": "ROUTES",
-                        "value": "/workspace/leaderboard/data/routes_testing.xml"
-                      },
-                      {
-                        "name": "REPETITIONS",
-                        "value": "1"
-                      },
-                      {
-                        "name": "RESUME",
-                        "value.$": "$.submission.resume"
-                      },
-                      {
-                        "name": "NVIDIA_DRIVER_CAPABILITIES",
-                        "value": "all"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "0"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/workspace/leaderboard",
-                        "name": "leaderboard"
-                      },
-                      {
-                        "mountPath": "/workspace/scenario_runner",
-                        "name": "scenario-runner"
-                      },
-                      {
-                        "mountPath": "/workspace/CARLA",
-                        "name": "carla-python-api"
-                      },
-                      {
-                        "mountPath": "/tmp/agent",
-                        "name": "logs",
-                        "subPath": "agent/agent1"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "simulator-2",
-                    "image.$": "$.cluster.simulator_image",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /home/carla/run_carla.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2100"
-                      },
-                      {
-                        "name": "DISPLAY",
-                        "value": ":0"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "1"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/tmp/.X11-unix",
-                        "name": "x11"
-                      },
-                      {
-                        "mountPath": "/home/carla/CarlaUE4/Saved",
-                        "name": "logs",
-                        "subPath": "simulator"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ],
-                    "securityContext": {
-                      "privileged": true
-                    },
-                    "resources": {
-                      "limits": {
-                        "nvidia.com/gpu": 1
-                      }
-                    }
-                  },
-                  {
-                    "name": "agent-2",
-                    "image.$": "$.submission.submitted_image_uri",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /workspace/leaderboard/run_leaderboard.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2100"
-                      },
-                      {
-                        "name": "CHALLENGE_TRACK_CODENAME",
-                        "value.$": "$.submission.track_codename"
-                      },
-                      {
-                        "name": "ROUTES_SUBSET",
-                        "value": "5-9"
-                      },
-                      {
-                        "name": "ROUTES",
-                        "value": "/workspace/leaderboard/data/routes_testing.xml"
-                      },
-                      {
-                        "name": "REPETITIONS",
-                        "value": "1"
-                      },
-                      {
-                        "name": "RESUME",
-                        "value.$": "$.submission.resume"
-                      },
-                      {
-                        "name": "NVIDIA_DRIVER_CAPABILITIES",
-                        "value": "all"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "1"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/workspace/leaderboard",
-                        "name": "leaderboard"
-                      },
-                      {
-                        "mountPath": "/workspace/scenario_runner",
-                        "name": "scenario-runner"
-                      },
-                      {
-                        "mountPath": "/workspace/CARLA",
-                        "name": "carla-python-api"
-                      },
-                      {
-                        "mountPath": "/tmp/agent",
-                        "name": "logs",
-                        "subPath": "agent/agent2"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "simulator-3",
-                    "image.$": "$.cluster.simulator_image",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /home/carla/run_carla.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2200"
-                      },
-                      {
-                        "name": "DISPLAY",
-                        "value": ":0"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "2"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/tmp/.X11-unix",
-                        "name": "x11"
-                      },
-                      {
-                        "mountPath": "/home/carla/CarlaUE4/Saved",
-                        "name": "logs",
-                        "subPath": "simulator"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ],
-                    "securityContext": {
-                      "privileged": true
-                    },
-                    "resources": {
-                      "limits": {
-                        "nvidia.com/gpu": 1
-                      }
-                    }
-                  },
-                  {
-                    "name": "agent-3",
-                    "image.$": "$.submission.submitted_image_uri",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /workspace/leaderboard/run_leaderboard.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2200"
-                      },
-                      {
-                        "name": "CHALLENGE_TRACK_CODENAME",
-                        "value.$": "$.submission.track_codename"
-                      },
-                      {
-                        "name": "ROUTES_SUBSET",
-                        "value": "10-14"
-                      },
-                      {
-                        "name": "ROUTES",
-                        "value": "/workspace/leaderboard/data/routes_testing.xml"
-                      },
-                      {
-                        "name": "REPETITIONS",
-                        "value": "1"
-                      },
-                      {
-                        "name": "RESUME",
-                        "value.$": "$.submission.resume"
-                      },
-                      {
-                        "name": "NVIDIA_DRIVER_CAPABILITIES",
-                        "value": "all"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "2"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/workspace/leaderboard",
-                        "name": "leaderboard"
-                      },
-                      {
-                        "mountPath": "/workspace/scenario_runner",
-                        "name": "scenario-runner"
-                      },
-                      {
-                        "mountPath": "/workspace/CARLA",
-                        "name": "carla-python-api"
-                      },
-                      {
-                        "mountPath": "/tmp/agent",
-                        "name": "logs",
-                        "subPath": "agent/agent3"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "simulator-4",
-                    "image.$": "$.cluster.simulator_image",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /home/carla/run_carla.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2300"
-                      },
-                      {
-                        "name": "DISPLAY",
-                        "value": ":0"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "3"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/tmp/.X11-unix",
-                        "name": "x11"
-                      },
-                      {
-                        "mountPath": "/home/carla/CarlaUE4/Saved",
-                        "name": "logs",
-                        "subPath": "simulator"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ],
-                    "securityContext": {
-                      "privileged": true
-                    },
-                    "resources": {
-                      "limits": {
-                        "nvidia.com/gpu": 1
-                      }
-                    }
-                  },
-                  {
-                    "name": "agent-4",
-                    "image.$": "$.submission.submitted_image_uri",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /workspace/leaderboard/run_leaderboard.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CARLA_PORT",
-                        "value": "2300"
-                      },
-                      {
-                        "name": "CHALLENGE_TRACK_CODENAME",
-                        "value.$": "$.submission.track_codename"
-                      },
-                      {
-                        "name": "ROUTES_SUBSET",
-                        "value": "15-19"
-                      },
-                      {
-                        "name": "ROUTES",
-                        "value": "/workspace/leaderboard/data/routes_testing.xml"
-                      },
-                      {
-                        "name": "REPETITIONS",
-                        "value": "1"
-                      },
-                      {
-                        "name": "RESUME",
-                        "value.$": "$.submission.resume"
-                      },
-                      {
-                        "name": "NVIDIA_DRIVER_CAPABILITIES",
-                        "value": "all"
-                      },
-                      {
-                        "name": "NVIDIA_VISIBLE_DEVICES",
-                        "value": "3"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/workspace/leaderboard",
-                        "name": "leaderboard"
-                      },
-                      {
-                        "mountPath": "/workspace/scenario_runner",
-                        "name": "scenario-runner"
-                      },
-                      {
-                        "mountPath": "/workspace/CARLA",
-                        "name": "carla-python-api"
-                      },
-                      {
-                        "mountPath": "/tmp/agent",
-                        "name": "logs",
-                        "subPath": "agent/agent4"
-                      },
-                      {
-                        "mountPath": "/tmp/status",
-                        "name": "logs",
-                        "subPath": "containers-status"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "logcopy",
-                    "image.$": "$.cluster.logcopy_image",
-                    "command": [
-                      "/bin/bash",
-                      "-c"
-                    ],
-                    "args": [
-                      "bash /workspace/run_logcopy.sh\n"
-                    ],
-                    "env": [
-                      {
-                        "name": "CHALLENGE_ID",
-                        "value.$": "$.submission.challenge_id"
-                      },
-                      {
-                        "name": "SUBMISSION_ID",
-                        "value.$": "$.submission.submission_id"
-                      },
-                      {
-                        "name": "TRACK_ID",
-                        "value.$": "$.submission.track_id"
-                      },
-                      {
-                        "name": "TEAM_ID",
-                        "value.$": "$.submission.team_id"
-                      },
-                      {
-                        "name": "S3_BUCKET",
-                        "value.$": "$.aws.s3_bucket"
-                      },
-                      {
-                        "name": "DYNAMODB_SUBMISSIONS_TABLE",
-                        "value.$": "$.aws.dynamodb_submissions_table"
-                      },
-                      {
-                        "name": "EVALAI_AUTH_TOKEN",
-                        "value.$": "$.evalai.auth_token"
-                      },
-                      {
-                        "name": "EVALAI_API_SERVER",
-                        "value.$": "$.evalai.api_server"
-                      }
-                    ],
-                    "volumeMounts": [
-                      {
-                        "mountPath": "/logs",
-                        "name": "logs"
-                      },
-                      {
-                        "mountPath": "/utils/leaderboard",
-                        "name": "leaderboard"
-                      },
-                      {
-                        "mountPath": "/utils/scenario_runner",
-                        "name": "scenario-runner"
-                      }
-                    ]
-                  }
-                ],
-                "restartPolicy": "OnFailure",
-                "volumes": [
-                  {
-                    "name": "leaderboard",
-                    "emptyDir": {}
-                  },
-                  {
-                    "name": "scenario-runner",
-                    "emptyDir": {}
-                  },
-                  {
-                    "name": "carla-python-api",
-                    "emptyDir": {}
-                  },
-                  {
-                    "name": "logs",
-                    "emptyDir": {}
-                  },
-                  {
-                    "name": "x11",
-                    "hostPath": {
-                      "path": "/tmp/.X11-unix"
-                    }
-                  }
-                ]
-              }
-            }
-          }
-        }
-      },
-      "InputPath": "$",
-      "Next": "EKS RemoveJob",
-      "ResultPath": null,
-      "Catch": [
-        {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
-          "ResultPath": null,
-          "Next": "EKS RemoveJob"
-        }
-      ]
-    },
-    "EKS RemoveJob": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::eks:call",
-      "Parameters": {
-        "ClusterName.$": "$.cluster.name",
-        "CertificateAuthority.$": "$.cluster.certificate_authority",
-        "Endpoint.$": "$.cluster.endpoint",
-        "Method": "DELETE",
-        "Path.$": "States.Format('/apis/batch/v1/namespaces/default/jobs/{}', $.submission.name)",
-        "QueryParameters": {
-          "propagationPolicy": [
-            "Foreground"
-          ]
-        }
-      },
+      ],
       "Next": "PostEKS",
-      "ResultPath": null,
-      "Catch": [
-        {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
-          "Next": "PostEKS",
-          "ResultPath": null
-        }
-      ]
+      "ResultPath": null
     },
     "PostEKS": {
       "Type": "Task",
@@ -1391,7 +803,7 @@
       "OutputPath": "$.Payload",
       "Parameters": {
         "Payload.$": "$",
-        "FunctionName": "arn:aws:lambda:us-west-2:342236305043:function:postEKS:$LATEST"
+        "FunctionName": "arn:aws:lambda:us-west-2:342236305043:function:stagingPostEKS:$LATEST"
       },
       "Retry": [
         {
@@ -1401,184 +813,12 @@
             "Lambda.SdkClientException",
             "Lambda.TooManyRequestsException"
           ],
-          "IntervalSeconds": 2,
-          "MaxAttempts": 6,
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
           "BackoffRate": 2
         }
       ],
-      "Next": "DynamoDB Submissions UpdateItem"
-    },
-    "DynamoDB Submissions UpdateItem": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::dynamodb:updateItem",
-      "Parameters": {
-        "TableName.$": "$.aws.dynamodb_submissions_table",
-        "Key": {
-          "team_id": {
-            "S.$": "$.submission.team_id"
-          },
-          "submission_id": {
-            "S.$": "$.submission.submission_id"
-          }
-        },
-        "UpdateExpression": "SET submission_status = :s, end_time = :t",
-        "ExpressionAttributeValues": {
-          ":s": {
-            "S.$": "$.submission.submission_status"
-          },
-          ":t": {
-            "S.$": "$.submission.end_time"
-          }
-        }
-      },
-      "ResultPath": null,
-      "Next": "Choice Status 2"
-    },
-    "Choice Status 2": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Variable": "$.submission.submission_status",
-          "StringEquals": "FINISHED",
-          "Next": "Choice DB"
-        }
-      ],
-      "Default": "Pass"
-    },
-    "Choice DB": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Variable": "$.cluster.id",
-          "StringEquals": "leaderboard-10",
-          "Next": "DynamoDB Results UpdateItem L1"
-        }
-      ],
-      "Default": "DynamoDB Results UpdateItem L2"
-    },
-    "DynamoDB Results UpdateItem L1": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::dynamodb:updateItem",
-      "Parameters": {
-        "TableName.$": "$.aws.dynamodb_submissions_table",
-        "Key": {
-          "team_id": {
-            "S.$": "$.submission.team_id"
-          },
-          "submission_id": {
-            "S.$": "$.submission.submission_id"
-          }
-        },
-        "UpdateExpression": "SET driving_score = :ds, route_completion = :rc, infraction_penalty = :ip, collisions_pedestrians = :cp, collisions_vehicles = :cv, collisions_layout = :cl, red_light_infractions = :rl, stop_sign_infractions = :ss, off_road_infractions = :or, route_deviations = :rd, route_timeouts = :rt, agent_blocked = :ab",
-        "ExpressionAttributeValues": {
-          ":ds": {
-            "S.$": "$.results.driving_score"
-          },
-          ":rc": {
-            "S.$": "$.results.route_completion"
-          },
-          ":ip": {
-            "S.$": "$.results.infraction_penalty"
-          },
-          ":cp": {
-            "S.$": "$.results.collisions_pedestrians"
-          },
-          ":cv": {
-            "S.$": "$.results.collisions_vehicles"
-          },
-          ":cl": {
-            "S.$": "$.results.collisions_layout"
-          },
-          ":rl": {
-            "S.$": "$.results.red_light_infractions"
-          },
-          ":ss": {
-            "S.$": "$.results.stop_sign_infractions"
-          },
-          ":or": {
-            "S.$": "$.results.off-road_infractions"
-          },
-          ":rd": {
-            "S.$": "$.results.route_deviations"
-          },
-          ":rt": {
-            "S.$": "$.results.route_timeouts"
-          },
-          ":ab": {
-            "S.$": "$.results.agent_blocked"
-          }
-        }
-      },
       "End": true
-    },
-    "DynamoDB Results UpdateItem L2": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::dynamodb:updateItem",
-      "Parameters": {
-        "TableName.$": "$.aws.dynamodb_submissions_table",
-        "Key": {
-          "team_id": {
-            "S.$": "$.submission.team_id"
-          },
-          "submission_id": {
-            "S.$": "$.submission.submission_id"
-          }
-        },
-        "UpdateExpression": "SET driving_score = :ds, route_completion = :rc, infraction_penalty = :ip, collisions_pedestrians = :cp, collisions_vehicles = :cv, collisions_layout = :cl, red_light_infractions = :rl, stop_sign_infractions = :ss, off_road_infractions = :or, route_deviations = :rd, route_timeouts = :rt, agent_blocked = :ab, yield_emergency_vehicle_infractions = :ev, scenario_timeouts = :st, min_speed_infractions = :ms",
-        "ExpressionAttributeValues": {
-          ":ds": {
-            "S.$": "$.results.driving_score"
-          },
-          ":rc": {
-            "S.$": "$.results.route_completion"
-          },
-          ":ip": {
-            "S.$": "$.results.infraction_penalty"
-          },
-          ":cp": {
-            "S.$": "$.results.collisions_pedestrians"
-          },
-          ":cv": {
-            "S.$": "$.results.collisions_vehicles"
-          },
-          ":cl": {
-            "S.$": "$.results.collisions_layout"
-          },
-          ":rl": {
-            "S.$": "$.results.red_light_infractions"
-          },
-          ":ss": {
-            "S.$": "$.results.stop_sign_infractions"
-          },
-          ":or": {
-            "S.$": "$.results.off-road_infractions"
-          },
-          ":rd": {
-            "S.$": "$.results.route_deviations"
-          },
-          ":rt": {
-            "S.$": "$.results.route_timeouts"
-          },
-          ":ab": {
-            "S.$": "$.results.agent_blocked"
-          },
-          ":ev": {
-            "S.$": "$.results.yield_emergency_vehicle_infractions"
-          },
-          ":st": {
-            "S.$": "$.results.scenario_timeouts"
-          },
-          ":ms": {
-            "S.$": "$.results.min_speed_infractions"
-          }
-        }
-      },
-      "End": true
-    },
-    "Pass": {
-      "Type": "Pass",
-      "End": true,
-      "ResultPath": null
     }
   }
 }

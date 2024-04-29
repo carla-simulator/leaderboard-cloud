@@ -11,7 +11,7 @@ data:
     <source>
       @type tail
       @id in_tail_container_logs
-      path /var/log/containers/*simulator*.log, /var/log/containers/*agent*.log, /var/log/containers/*logcopy*.log, /var/log/containers/*private-contents*.log
+      path /var/log/containers/*simulator*.log, /var/log/containers/*agent*.log, /var/log/containers/*uploader*.log, /var/log/containers/*monitor*.log, /var/log/containers/*private-contents*.log
       pos_file "/var/log/fluentd-containers.log.pos"
       tag "kubernetes.*"
       read_from_head true
@@ -99,11 +99,11 @@ spec:
         image: fluent/fluentd-kubernetes-daemonset:v1.16.1-debian-cloudwatch-1.2
         env:
           - name: K8S_NODE_NAME
-            value: leaderboard-10
+            value: staging-leaderboard-10
           - name: AWS_REGION
             value: us-west-2
           - name: LOG_GROUP_NAME
-            value: leaderboard-10
+            value: staging-leaderboard-10
         resources:
           limits:
             memory: 200Mi

@@ -19,7 +19,7 @@
                 "ecr:UploadLayerPart",
                 "ecr:CompleteLayerUpload"
             ],
-            "Resource": "arn:aws:ecr:us-west-2:342236305043:repository/*"
+            "Resource": "arn:aws:ecr:us-east-1:342236305043:repository/*"
         },
         {
             "Effect": "Allow",
