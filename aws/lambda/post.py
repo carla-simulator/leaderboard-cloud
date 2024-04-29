@@ -39,7 +39,7 @@ def lambda_handler(event, context):
     submission_data["submission"]["submission_status"] = submission_status
 
     results = read_file_from_s3(submission_data["aws"]["s3_bucket"], "{}/evalai/results.json".format(submission_data["submission"]["submission_id"]))
-    stdout = read_file_from_s3(submission_data["aws"]["s3_bucket"], "{}/evalai/stdout.txt".format(submission_data["submission"]["submission_id"]))
+    stdout = read_file_from_s3(submission_data["aws"]["s3_bucket"], "{}/evalai/stdout.txt".format(submission_data["submission"]["submission_id"])) if is_allowed else "You are not allowed to submit to this track. Please, run the qualifier track first."
     stderr = "" if is_allowed else "You are not allowed to submit to this track. Please, run the qualifier track first."
     metadata = read_file_from_s3(submission_data["aws"]["s3_bucket"], "{}/evalai/metadata.json".format(submission_data["submission"]["submission_id"]))
 
