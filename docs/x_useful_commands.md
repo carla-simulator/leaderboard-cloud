@@ -34,6 +34,12 @@ kubectl config use-context l2
 
 # Changing the alias (for the cluster creator only)
 kubectl config rename-context $(kubectl config current-context) l2
+
+# Show all available contexts
+kubectl config get-contexts
+
+# Remove context
+kubectl config delete-context l2-staging
 ```
 
 # kubectl
@@ -74,4 +80,17 @@ To enter an instance through ssh
 ```bash
 # SSH into a machine
 ssh -i <private-key-file> ubuntu@<public-ip>
+```
+
+To get the kubelet status and logs
+```bash
+systemctl status kubelet
+journalctl -xe --unit kubelet
+```
+
+To get the containerd status, logs and configuration
+```bash
+systemctl status containerd
+journalctl -xe --unit containerd
+containerd config dump
 ```
