@@ -39,8 +39,6 @@ spec:
                 echo "Detected a resume initiated by the user."
                 aws s3 rm s3://${S3_BUCKET}/${SUBMISSION_ID}/containers-status --recursive --exclude "*" --include "simulation.cancel"
               fi
-
-              bash /tmp/gpu_utils/get_gpu_uuid.sh > /tmp/gpu_utils/gpu.txt
           env:
             - name: SUBMISSION_ID
               value.$: $.submission.submission_id
@@ -61,9 +59,6 @@ spec:
               name: gpu-utils
             - mountPath: /tmp/logs
               name: logs
-          resources:
-            limits:
-              nvidia.com/gpu: 1
 
       containers:
         
@@ -72,7 +67,6 @@ spec:
           command: ["/bin/bash", "-c"]
           args:
             - |
-              export NVIDIA_VISIBLE_DEVICES=$(/gpu/get_gpu_device.sh)
               bash /home/carla/run_carla.sh
           env:
             - name: WORKER_ID
@@ -99,7 +93,6 @@ spec:
           command: ["/bin/bash", "-c"]
           args:
             - |
-              export NVIDIA_VISIBLE_DEVICES=$(/gpu/get_gpu_device.sh)
               bash /workspace/leaderboard/run_leaderboard.sh
           env:
             - name: WORKER_ID
@@ -132,6 +125,11 @@ spec:
               subPath: containers-status
             - mountPath: /workspace/log/ros
               name: ros-logs
+          # Set the resource gpu limit at the agent container. In this way, agents will only see one available GPU
+          # and we avoid users sending models to a different GPU from the assgined one.
+          resources:
+            limits:
+              nvidia.com/gpu: 1
 
         - name: aws-uploader
           image.$: $.cluster.uploader_image
