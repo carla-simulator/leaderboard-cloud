@@ -3,12 +3,18 @@
 # Get the file names of this attempt
 ID="$WORKER_ID"
 CRASH_ID=$(find /tmp/status -name *simulator-$ID.crash* | wc -l)
+
 SIMULATOR_LOGS="/tmp/logs/simulator-$ID.log"
-AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$CRASH_ID"
-AGENT_DONE_FILE="/tmp/status/agent-$ID.done"
-SIMULATOR_CRASH_FILE="/tmp/status/simulator-$ID.crash$CRASH_ID"
+SIMULATOR_START_FILE="/tmp/status/simulator-$ID.start$CRASH_ID"
 SIMULATOR_DONE_FILE="/tmp/status/simulator-$ID.done"
+SIMULATOR_CRASH_FILE="/tmp/status/simulator-$ID.crash$CRASH_ID"
+
+AGENT_DONE_FILE="/tmp/status/agent-$ID.done"
+AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$CRASH_ID"
+
 SIMULATION_CANCEL_FILE="/tmp/status/simulation-$ID.cancel"
+
+GPU_DEVICE_FILE="/gpu/uuid.txt$CRASH_ID"
 
 # Ending function before exitting the container
 kill_all_processes() {
@@ -48,12 +54,35 @@ if [ -f "$SIMULATOR_LOGS" ]; then
     echo "Found partial simulator logs"
 fi
 
+echo "Waiting for a GPU to be assigned..."
+MAX_RETRIES=120  # wait 1h maximum
+for ((i=1;i<=$MAX_RETRIES;i++)); do
+    if [ -f $GPU_DEVICE_FILE ]; then
+        echo ""
+        echo "Detected that a GPU has been assigned"
+        break
+    fi
+    sleep 30
+done
+
+if ! [ -f $GPU_DEVICE_FILE ]; then
+    echo "No GPU assigned. Stopping..."
+    kill_and_wait_for_agent crash
+    exit 1
+fi
+
 echo ""
-UUID=$(cat /gpu/gpu.txt)
+export NVIDIA_VISIBLE_DEVICES=$(/gpu/get_gpu_device.sh ${GPU_DEVICE_FILE})
+UUID=$(cat ${GPU_DEVICE_FILE})
 echo "Using GPU: ${UUID} (${NVIDIA_VISIBLE_DEVICES})"
 
 echo "Starting CARLA server"
 ./CarlaUE4.sh -vulkan -RenderOffScreen -nosound -ini:[/Script/Engine.RendererSettings]:r.GraphicsAdapter=${NVIDIA_VISIBLE_DEVICES} &
+
+echo "Sleeping a bit to ensure CARLA is ready"
+sleep 60
+
+touch $SIMULATOR_START_FILE
 
 while sleep 5 ; do
     if [ -f $AGENT_CRASH_FILE ]; then

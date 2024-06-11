@@ -3,14 +3,21 @@
 # Get the file names of this attempt
 ID="$WORKER_ID"
 CRASH_ID=$(find /tmp/status -name *agent-$ID.crash* | wc -l)
+
 AGENT_LOGS="/tmp/logs/agent-$ID.log"
-AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$CRASH_ID"
+AGENT_START_FILE="/tmp/status/agent-$ID.start$CRASH_ID"
 AGENT_DONE_FILE="/tmp/status/agent-$ID.done"
-SIMULATOR_CRASH_FILE="/tmp/status/simulator-$ID.crash$CRASH_ID"
+AGENT_CRASH_FILE="/tmp/status/agent-$ID.crash$CRASH_ID"
+
+SIMULATOR_START_FILE="/tmp/status/simulator-$ID.start$CRASH_ID"
 SIMULATOR_DONE_FILE="/tmp/status/simulator-$ID.done"
+SIMULATOR_CRASH_FILE="/tmp/status/simulator-$ID.crash$CRASH_ID"
+
 SIMULATION_CANCEL_FILE="/tmp/status/simulation-$ID.cancel"
 
 AGENT_RESULTS="/tmp/agent/partial_agent_results$ID.json"
+
+GPU_DEVICE_FILE="/gpu/uuid.txt$CRASH_ID"
 
 MAX_IDLE=800
 
@@ -51,8 +58,12 @@ if [ -f "$AGENT_LOGS" ]; then
     echo "Found partial agent logs"
 fi
 
+# GPU assignment
+bash /gpu/get_gpu_uuid.sh > $GPU_DEVICE_FILE
+
 echo ""
-UUID=$(cat /gpu/gpu.txt)
+export NVIDIA_VISIBLE_DEVICES=$(/gpu/get_gpu_device.sh ${GPU_DEVICE_FILE})
+UUID=$(cat ${GPU_DEVICE_FILE})
 echo "Using GPU: ${UUID} (${NVIDIA_VISIBLE_DEVICES})"
 echo ""
 
@@ -116,9 +127,23 @@ if [[ -f "${HOME}/agent_sources.sh" ]]; then
   source ${HOME}/agent_sources.sh
 fi
 
-echo ""
-echo "Sleeping a bit to ensure CARLA is ready"
-sleep 60
+echo "Waiting for the simulator container to start..."
+MAX_RETRIES=120  # wait 1h maximum
+for ((i=1;i<=$MAX_RETRIES;i++)); do
+    if [ -f $SIMULATOR_START_FILE ]; then
+        echo ""
+        echo "Detected that the simulator container has started"
+        break
+    fi
+    sleep 30
+done
+
+if ! [ -f $SIMULATOR_START_FILE ]; then
+    echo "The simulator has not started. Stopping..."
+    kill_and_wait_for_simulator crash
+    exit 1
+fi
+
 echo "Starting the Leaderboard"
 
 # To ensure the Leaderboard never blocks, run it in the background (Done using the '&' at the end)
@@ -135,6 +160,8 @@ python3 -u ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator.py \
     --record=${RECORD_PATH} \
     --debug-checkpoint=${DEBUG_CHECKPOINT_ENDPOINT} \
     --debug=${DEBUG_CHALLENGE} &
+
+touch $AGENT_START_FILE
 
 while sleep 5 ; do
     if [ "$(file_age $AGENT_LOGS)" -gt "$MAX_IDLE" ]; then
