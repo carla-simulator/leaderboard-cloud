@@ -1,4 +1,5 @@
 import math
+import re
 
 
 def lambda_handler(event, context):
@@ -10,11 +11,19 @@ def lambda_handler(event, context):
 
     out_ = []
     for worker_id, subset in enumerate(routes_subset):
+        name = "{}-{}-{}-worker{}".format(
+            # only lowercase alphanumeric characters plus - and .
+            re.sub('[^0-9a-z-.]+', "?", event["data"]["submission"]["team_name"].lower().replace("_", "-").replace(" ", "-")),
+            event["data"]["submission"]["track_codename"].lower().replace("_", "-"),
+            event["data"]["submission"]["submission_id"],
+            worker_id + 1
+        )
+
         out_.append({
             "cluster": event["data"]["cluster"],
             "submission": {
                 "submission_id": event["data"]["submission"]["submission_id"],
-                "name": "submission-{}-{}".format(event["data"]["submission"]["submission_id"], worker_id + 1),
+                "name": name,
                 "resume": event["data"]["submission"]["resume"],
                 "submitted_image_uri": event["data"]["submission"]["submitted_image_uri"],
                 "track_codename": event["data"]["submission"]["track_codename"],
