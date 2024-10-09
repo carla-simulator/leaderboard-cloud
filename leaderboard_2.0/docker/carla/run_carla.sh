@@ -19,7 +19,7 @@ GPU_DEVICE_FILE="/gpu/uuid.txt$CRASH_ID"
 # Ending function before exitting the container
 kill_all_processes() {
     # Avoid exiting on error
-    pkill -9 'CarlaUE4'
+    pkill -9 'CarlaUE4' || true
 }
 
 kill_and_wait_for_agent () {
