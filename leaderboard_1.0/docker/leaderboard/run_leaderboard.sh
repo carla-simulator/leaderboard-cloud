@@ -77,7 +77,9 @@ file_age () {
 
 # Stop all processes
 kill_all_processes() {
-    pkill -9 'python|java|ros|publisher|catkin'
+    # Avoid exiting the script if pkill fails. We are not setting exit on error
+    # (i.e., set -e) but users may enable it during agent_sources.sh
+    pkill -9 'python|java|ros|publisher|catkin' || true
 }
 
 # Ending function before exitting the container

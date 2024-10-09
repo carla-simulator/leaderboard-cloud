@@ -12,7 +12,8 @@ SIMULATION_CANCEL_FILE="/tmp/status/simulation-$ID.cancel"
 
 # Ending function before exitting the container
 kill_all_processes() {
-    pkill -9 'CarlaUE4'
+    # Avoid exiting on error
+    pkill -9 'CarlaUE4' || true
 }
 
 kill_and_wait_for_agent () {
